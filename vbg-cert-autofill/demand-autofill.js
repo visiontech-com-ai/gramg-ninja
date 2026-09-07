@@ -25,8 +25,12 @@
   function pad2(n) { n = String(n); return n.length < 2 ? "0" + n : n; }
   function todayDMY() { var d = new Date(); return pad2(d.getDate()) + "/" + pad2(d.getMonth() + 1) + "/" + d.getFullYear(); }
   function toDMY(v) {
-    if (v == null) return "";
-    if (v instanceof Date && !isNaN(v)) return pad2(v.getDate()) + "/" + pad2(v.getMonth() + 1) + "/" + v.getFullYear();
+    if (v == null || v === "") return "";
+    if (v instanceof Date && !isNaN(v)) return pad2(v.getUTCDate()) + "/" + pad2(v.getUTCMonth() + 1) + "/" + v.getUTCFullYear();
+    // Excel serial date (raw cell value) -> unambiguous Y/M/D via SheetJS SSF
+    if (typeof v === "number" && isFinite(v)) {
+      try { var dc = window.XLSX && XLSX.SSF && XLSX.SSF.parse_date_code(v); if (dc && dc.y) return pad2(dc.d) + "/" + pad2(dc.m) + "/" + dc.y; } catch (e) {}
+    }
     var s = String(v).trim(); if (!s) return "";
     var iso = s.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/);
     if (iso) return pad2(+iso[3]) + "/" + pad2(+iso[2]) + "/" + iso[1];
@@ -50,7 +54,7 @@
     if (!window.XLSX) throw new Error("spreadsheet library not loaded");
     var wb = XLSX.read(ab, { cellDates: false });
     var ws = wb.Sheets[wb.SheetNames[0]];
-    var rows = XLSX.utils.sheet_to_json(ws, { defval: "", raw: false });
+    var rows = XLSX.utils.sheet_to_json(ws, { defval: "", raw: true });
     var norm = [], sigParts = [];
     rows.forEach(function (o) {
       var regNo = String(pick(o, /reg/i) || "").trim();
