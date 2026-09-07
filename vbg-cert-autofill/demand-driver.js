@@ -15,6 +15,7 @@
   "use strict";
   if (window.__DXWD_DRV) return;
   window.__DXWD_DRV = true;
+  window.__DXWD_VER = "1.6.5";
 
   var LS_RUN = "dxwd_run";
   var LS_ALERT = "dxwd_lastAlert";
@@ -43,7 +44,7 @@
   function overrideDialogs() {
     if (overridden) return; overridden = true;
     window.alert = function (m) {
-      try { localStorage.setItem(LS_ALERT, JSON.stringify({ t: Date.now(), msg: String(m == null ? "" : m) })); } catch (e) {}
+      try { localStorage.setItem(LS_ALERT, JSON.stringify({ t: nowMs(), msg: String(m == null ? "" : m) })); } catch (e) {}
     };
     window.confirm = function () { return true; };
   }
@@ -57,17 +58,20 @@
   /* ---------------------- run state (localStorage) ---------------------- */
   function loadRun() { try { return JSON.parse(localStorage.getItem(LS_RUN) || "null"); } catch (e) { return null; } }
   function saveRun(r) {
-    try { r.updatedAt = Date.now(); localStorage.setItem(LS_RUN, JSON.stringify(r)); } catch (e) {}
+    try { r.updatedAt = nowMs(); localStorage.setItem(LS_RUN, JSON.stringify(r)); } catch (e) {}
     notifyUI();
   }
   function notifyUI() { try { window.postMessage({ source: "DXWD_DRV", type: "sync" }, "*"); } catch (e) {} }
   function log(r, level, text) {
-    (r.log = r.log || []).push({ t: Date.now(), level: level, text: text });
+    (r.log = r.log || []).push({ t: nowMs(), level: level, text: text });
     if (r.log.length > 400) r.log = r.log.slice(-400);
   }
 
   /* ---------------------- small helpers ---------------------- */
   function $(id) { return document.getElementById(id); }
+  // This portal BREAKS the whole Date object in the page (MAIN) world — new Date(), getTime(),
+  // Date.now all throw "...reading 'keyCode'". performance.* is unaffected, so base time on it.
+  function nowMs() { try { return Math.round((performance.timeOrigin || 0) + performance.now()); } catch (e) { return 0; } }
   function sleep(ms) { return new Promise(function (res) { setTimeout(res, ms); }); }
   function prmReady() { return !!(window.Sys && Sys.WebForms && Sys.WebForms.PageRequestManager && Sys.WebForms.PageRequestManager.getInstance); }
   function prm() { return Sys.WebForms.PageRequestManager.getInstance(); }
@@ -75,11 +79,11 @@
   function waitFor(cond, timeout, interval) {
     interval = interval || 150;
     return new Promise(function (res) {
-      var t0 = Date.now();
+      var t0 = nowMs();
       (function tick() {
         var v; try { v = cond(); } catch (e) { v = false; }
         if (v) return res(v);
-        if (Date.now() - t0 > timeout) return res(false);
+        if (nowMs() - t0 > timeout) return res(false);
         setTimeout(tick, interval);
       })();
     });
@@ -202,21 +206,39 @@
     }, STEP_TIMEOUT);
   }
 
-  // Click Proceed (full postback). Resolves {submitted:true} when the page
-  // starts unloading, or {blocked:true} if no reload happened in time
-  // (client validation blocked it).
+  // Click Proceed. On this portal Proceed submits via an ASYNC UpdatePanel postback (no full
+  // reload) and shows a "Data Entered Successfully" alert. So resolve on any of: a full reload
+  // (older behaviour), the async postback completing, or a captured alert. {blocked} only if none
+  // of those happen within PROCEED_WAIT. (readLastAlert must have been cleared before calling.)
   function clickProceed() {
     return new Promise(function (resolve) {
-      var done = false;
-      function onUnload() { if (done) return; done = true; resolve({ submitted: true }); }
-      window.addEventListener("beforeunload", onUnload, { once: true });
-      window.addEventListener("unload", onUnload, { once: true });
-      try { var b = $(IDS.proceed); if (b) b.click(); else { done = true; return resolve({ blocked: true, reason: "Proceed button missing" }); } } catch (e) {}
-      setTimeout(function () {
+      var done = false, prmHandler = null, timer = null;
+      function finish(res) {
         if (done) return; done = true;
         try { window.removeEventListener("beforeunload", onUnload); } catch (e) {}
-        resolve({ blocked: true, reason: "no submit (validation?)", alert: readLastAlert() });
-      }, PROCEED_WAIT);
+        try { window.removeEventListener("unload", onUnload); } catch (e) {}
+        if (prmHandler) { try { prm().remove_endRequest(prmHandler); } catch (e) {} }
+        if (timer) clearTimeout(timer);
+        resolve(res);
+      }
+      function onUnload() { finish({ submitted: true, reloaded: true }); }
+      window.addEventListener("beforeunload", onUnload, { once: true });
+      window.addEventListener("unload", onUnload, { once: true });
+      try {
+        if (prmReady()) {
+          prmHandler = function () { setTimeout(function () { finish({ submitted: true, alert: readLastAlert() }); }, 250); };
+          prm().add_endRequest(prmHandler);
+        }
+      } catch (e) {}
+      try { var b = $(IDS.proceed); if (!b) return finish({ blocked: true, reason: "Proceed button missing" }); b.click(); } catch (e) {}
+      var t0 = nowMs();
+      (function tick() {
+        if (done) return;
+        var a = readLastAlert();
+        if (a && a.msg) return finish({ submitted: true, alert: a });
+        if (nowMs() - t0 > PROCEED_WAIT) return finish({ blocked: true, reason: "no confirmation", alert: readLastAlert() });
+        timer = setTimeout(tick, 300);
+      })();
     });
   }
 
@@ -230,7 +252,7 @@
     return null;
   }
   function markGroupWorkers(g, status, message) {
-    (g.workers || []).forEach(function (w) { if (w.status !== "done") { w.status = status; w.message = message; w.at = Date.now(); } });
+    (g.workers || []).forEach(function (w) { if (w.status !== "done") { w.status = status; w.message = message; w.at = nowMs(); } });
   }
   function finish(r) {
     var ok = 0, err = 0;
@@ -252,16 +274,21 @@
     if (!g) { saveRun(r); return; }
     var a = readLastAlert(); clearLastAlert();
     var msg = a ? a.msg : "";
-    var isErr = a ? /invalid|error|not\s|fail|wrong|already|exist|duplicate|please\s/i.test(msg) : false;
+    // A Proceed that actually reloaded the page almost always saved. Detect success positively
+    // (e.g. "Data Entered Successfully") and only treat as error on an explicit error message.
+    var okRe = /success|saved|entered|accept|complete|generat/i;
+    var errRe = /invalid|\berror\b|fail|wrong|already|duplicate|cannot|not\s+(allowed|valid|found|entered)|please\s/i;
+    var isOk = okRe.test(msg);
+    var done = isOk || !errRe.test(msg);   // default to success when reloaded with no explicit error
     var submitted = pp.workerKeys || [];
     (g.workers || []).forEach(function (w) {
       if (submitted.indexOf(w.applicant) < 0) return;
-      w.status = isErr ? "error" : "done";
-      w.message = msg || (isErr ? "portal reported an error" : "submitted");
-      w.at = Date.now();
+      w.status = done ? "done" : "error";
+      w.message = msg || (done ? "submitted" : "portal reported an error");
+      w.at = nowMs();
     });
-    if (isErr) { r.consecFail = (r.consecFail || 0) + 1; log(r, "err", g.regNo + ": " + (msg || "error")); }
-    else { r.consecFail = 0; log(r, "ok", g.regNo + ": " + (msg || "submitted")); }
+    if (done) { r.consecFail = 0; log(r, "ok", g.regNo + ": " + (msg || "submitted")); }
+    else { r.consecFail = (r.consecFail || 0) + 1; log(r, "err", g.regNo + ": " + (msg || "error")); }
     saveRun(r);
   }
 
@@ -283,6 +310,9 @@
         }
       }
 
+      // After a village change the registration dropdown repopulates a beat later — wait for it.
+      await waitFor(function () { return findRegOption(g.regNo) !== null; }, 8000);
+
       // -- registration (skip if already selected) --
       var ropt = findRegOption(g.regNo);
       if (!ropt) { markGroupWorkers(g, "error", "registration " + g.regNo + " not found in the list"); log(r, "warn", g.regNo + ": registration not found"); saveRun(r); return { reloaded: false }; }
@@ -291,6 +321,8 @@
         if (rr.timeout || rr.error) throw new Error("registration select " + (rr.timeout ? "timed out" : rr.error));
         await sleep(PACE);
       }
+      // The grid may render a beat after the registration postback — wait for its rows.
+      await waitFor(function () { return gridRows().length > 0; }, 8000);
 
       // -- fill each pending worker --
       var submitted = [];
@@ -298,7 +330,7 @@
       for (var i = 0; i < pend.length; i++) {
         var w = pend[i];
         var row = findWorkerRow(w.applicant);
-        if (!row) { w.status = "error"; w.message = "name not found in this registration's grid"; w.at = Date.now(); saveRun(r); continue; }
+        if (!row) { w.status = "error"; w.message = "name not found in this registration's grid"; w.at = nowMs(); saveRun(r); continue; }
         // row.pfx = ctl00_ContentPlaceHolder1_gvData_ctl02  ->  unique-name base ctl00$ContentPlaceHolder1$gvData$ctl02
         var base = UPFX + row.pfx.substring(PFX.length).replace(/_/g, "$");
 
@@ -317,25 +349,34 @@
         var toEl = $(row.pfx + "_dt_to");
         if (toEl && !String(toEl.value).trim()) { w.message = "warning: 'Work Demand To' did not auto-fill"; }
         submitted.push(w.applicant);
-        w.status = "filled"; w.at = Date.now(); saveRun(r);
+        w.status = "filled"; w.at = nowMs(); saveRun(r);
       }
 
       if (!submitted.length) { log(r, "warn", g.regNo + ": no matching worker filled"); saveRun(r); return { reloaded: false }; }
 
       // -- Proceed (full reload) --
-      r.pendingProceed = { groupIdx: g.idx, workerKeys: submitted, at: Date.now() };
+      r.pendingProceed = { groupIdx: g.idx, workerKeys: submitted, at: nowMs() };
       clearLastAlert(); saveRun(r);
       log(r, "info", g.regNo + ": submitting " + submitted.length + " worker(s)…"); saveRun(r);
 
       var out = await clickProceed();
-      if (out.submitted) return { reloaded: true };
+      if (out.reloaded) return { reloaded: true }; // full reload → resolveProceed handles it next load
 
-      // blocked by validation — undo pending, mark error
+      // Async submit (this portal keeps the page): classify from the captured alert, mark here, continue.
       r.pendingProceed = null;
-      var am = out.alert ? out.alert.msg : (out.reason || "submit blocked");
-      markGroupWorkers(g, "error", am);
-      r.consecFail = (r.consecFail || 0) + 1;
-      log(r, "err", g.regNo + ": " + am);
+      var msg = out.alert ? out.alert.msg : "";
+      clearLastAlert();
+      var okRe = /success|saved|entered|accept|complete|generat/i;
+      var errRe = /invalid|\berror\b|fail|wrong|already|duplicate|cannot|not\s+(allowed|valid|found|entered)|please\s/i;
+      var ok = !!out.submitted && (okRe.test(msg) || (!!msg && !errRe.test(msg)));
+      g.workers.forEach(function (w) {
+        if (submitted.indexOf(w.applicant) < 0) return;
+        w.status = ok ? "done" : "error";
+        w.message = msg || (ok ? "submitted" : (out.reason || "no confirmation"));
+        w.at = nowMs();
+      });
+      if (ok) { r.consecFail = 0; log(r, "ok", g.regNo + ": " + (msg || "submitted")); }
+      else { r.consecFail = (r.consecFail || 0) + 1; log(r, "err", g.regNo + ": " + (msg || out.reason || "no confirmation")); }
       saveRun(r);
       return { reloaded: false };
     } catch (e) {
@@ -374,21 +415,34 @@
     }
   }
 
+  // Single-flight guard so only one runLoop runs at a time (message + poll + boot all funnel here).
+  var __loopActive = false;
+  function kick() {
+    if (__loopActive) return;
+    var r = loadRun(); if (!r || !r.active) return;
+    __loopActive = true;
+    Promise.resolve().then(runLoop).then(function () { __loopActive = false; }, function () { __loopActive = false; });
+  }
+
   /* ---------------------- boot ---------------------- */
   // Install overrides ASAP so the post-submit alert on this load is captured.
   (function boot() {
     var r = loadRun();
     if (r && r.active) overrideDialogs();
-    // Kick from the UI's "start" as well (first run in a load where active was just set).
+    // Fast path: the UI posts "start"/"stop". Don't require ev.source===window — an
+    // isolated-world content script's postMessage may not set it as expected.
     window.addEventListener("message", function (ev) {
-      if (ev.source !== window || !ev.data || ev.data.source !== "DXWD_UI") return;
-      if (ev.data.type === "start") { overrideDialogs(); runLoop(); }
+      if (!ev.data || ev.data.source !== "DXWD_UI") return;
+      if (ev.data.type === "start") { overrideDialogs(); kick(); }
       else if (ev.data.type === "stop") {
         var rr = loadRun(); if (rr) { rr.stopRequested = true; rr.active = false; saveRun(rr); }
         restoreDialogs();
       }
     });
-    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", runLoop);
-    else runLoop();
+    // Robust fallback: poll for an active run so a Start (or a post-reload resume)
+    // always drives even if the cross-world message is missed.
+    setInterval(function () { var rr = loadRun(); if (rr && rr.active && !rr.stopRequested) { kick(); } }, 1000);
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", kick);
+    else kick();
   })();
 })();
