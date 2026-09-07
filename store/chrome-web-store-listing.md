@@ -172,12 +172,13 @@ No remote code; all processing is local. No analytics, no external network calls
 ---
 
 ## 7. Pre-submit checklist
-- [ ] Zip the `vbg-cert-autofill/` folder (the manifest must be at the zip root) and upload it.
-- [ ] Confirm `manifest.json` version is bumped for each new upload.
+- [ ] Build the zip with `build-webstore.bat` (bumps the version, puts `manifest.json` at the zip
+      root, and **strips the `key` field** — the Web Store rejects `key`; it stays in the source so
+      local "Load unpacked" keeps its fixed ID). Upload `dist/gramg-ninja-<version>.zip`.
+- [ ] Description stays ≤132 characters (Web Store hard limit).
 - [ ] Paste the summary, description, single purpose, and permission justifications above.
 - [ ] Set privacy policy URL, homepage, and support URL.
 - [ ] Complete the Data safety form per §4.
 - [ ] Upload the 128 icon, promo tile, and at least one 1280×800 screenshot.
-- [ ] Remove the extension `key` from `manifest.json` **only if** the Web Store assigns its own ID
-      and you no longer need the fixed local ID (keep it if you rely on the pinned ID).
+- [ ] (Handled automatically by `build-webstore.bat` — the zip has no `key`; the source keeps it.)
 ```

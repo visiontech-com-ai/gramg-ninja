@@ -5,9 +5,10 @@ REM
 REM  Usage:   build-webstore.bat [patch|minor|major]     (default: patch)
 REM  Output:  dist\gramg-ninja-<version>.zip   (manifest.json at zip root)
 REM
-REM  Bumps the "version" in vbg-cert-autofill\manifest.json, then zips the
-REM  CONTENTS of vbg-cert-autofill\ so manifest.json sits at the zip root,
-REM  which is what the Chrome Web Store requires.
+REM  - Bumps the "version" in vbg-cert-autofill\manifest.json.
+REM  - Zips a staged copy whose manifest has the private "key" REMOVED
+REM    (the Web Store rejects "key"; it stays in the source so local
+REM    "Load unpacked" keeps its fixed extension ID).
 REM =====================================================================
 setlocal
 set "PART=%~1"
@@ -37,12 +38,23 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "$raw2=([regex]$pat).Replace($raw,$rep,1);" ^
   "if($raw2 -eq $raw){ throw ('Could not find version '+$o+' in manifest.json') };" ^
   "[IO.File]::WriteAllText($p,$raw2,(New-Object Text.UTF8Encoding($false)));" ^
+  "$stage=Join-Path $env:DIST '_stage';" ^
+  "if(Test-Path $stage){ Remove-Item $stage -Recurse -Force };" ^
+  "Copy-Item -Path $env:SRC -Destination $stage -Recurse -Force;" ^
+  "$sm=Join-Path $stage 'manifest.json';" ^
+  "$mraw=[IO.File]::ReadAllText($sm);" ^
+  "$mraw2=[regex]::Replace($mraw,'(?m)^\s*\x22key\x22\s*:\s*\x22[^\x22]*\x22,[ \t]*\r?\n','');" ^
+  "if($mraw2 -eq $mraw){ Write-Host '  (note: no key field found to strip)' };" ^
+  "[IO.File]::WriteAllText($sm,$mraw2,(New-Object Text.UTF8Encoding($false)));" ^
+  "$null=($mraw2 | ConvertFrom-Json);" ^
   "$zip=Join-Path $env:DIST ('gramg-ninja-'+$n+'.zip');" ^
   "if(Test-Path $zip){ Remove-Item $zip -Force };" ^
-  "Compress-Archive -Path (Join-Path $env:SRC '*') -DestinationPath $zip -Force;" ^
+  "Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $zip -Force;" ^
+  "Remove-Item $stage -Recurse -Force;" ^
   "Write-Host '';" ^
   "Write-Host ('  Version : '+$o+'  ->  '+$n);" ^
-  "Write-Host ('  Zip     : '+$zip)"
+  "Write-Host ('  Zip     : '+$zip);" ^
+  "Write-Host '  Manifest key: stripped from zip (kept in source)'"
 
 if errorlevel 1 (
   echo.
