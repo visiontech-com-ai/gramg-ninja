@@ -15,7 +15,6 @@
   "use strict";
   if (window.__DXWD_DRV) return;
   window.__DXWD_DRV = true;
-  window.__DXWD_VER = "1.6.5";
 
   var LS_RUN = "dxwd_run";
   var LS_ALERT = "dxwd_lastAlert";
@@ -323,6 +322,21 @@
       }
       // The grid may render a beat after the registration postback — wait for its rows.
       await waitFor(function () { return gridRows().length > 0; }, 8000);
+
+      // -- clear Date of Application on EVERY row first --
+      // The portal persists previously-entered dates. Clearing dt_app on all rows makes the sheet
+      // authoritative: rows not in the sheet get their demand removed when we Proceed; the sheet's
+      // own workers are re-filled below. (Re-query each row — the grid DOM is replaced per postback.)
+      var clr = gridRows();
+      for (var k = 0; k < clr.length; k++) {
+        var rp = clr[k].pfx;
+        var appEl = $(rp + "_dt_app");
+        if (appEl && String(appEl.value).trim() !== "") {
+          var rbase = UPFX + rp.substring(PFX.length).replace(/_/g, "$");
+          await fillField(rp + "_dt_app", rbase + "$dt_app", "");
+          await sleep(PACE);
+        }
+      }
 
       // -- fill each pending worker --
       var submitted = [];

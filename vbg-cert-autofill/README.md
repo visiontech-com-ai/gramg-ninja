@@ -170,13 +170,19 @@ it), and **Work Demand To** is computed by the portal from *From + No of Days*.
 2. In the blue **“Work Demand autofill”** panel, click **① Choose Excel (.xlsx)…**
    and pick your sheet. The panel shows a **review table** of every row and the
    values that will be written.
-3. Click **▶ Start**. For each row the add-on **selects the village and
-   registration, fills the dates and days, and clicks *Proceed*** — the same
-   steps you’d do by hand. The page reloads once per registration (that’s normal);
-   the run **continues automatically** after each reload.
+3. Click **▶ Start**. For each registration the add-on **selects the village and
+   registration, clears the Date of Application on every row, fills the dates and
+   days for the workers in your sheet, and clicks *Proceed*** — the same steps
+   you’d do by hand. It works through all the registrations in one go.
 4. Watch the **status column** and **activity log**. When the portal’s
-   confirmation box appears after each save, the add-on **accepts it for you** and
-   records the message.
+   confirmation box (*“Data Entered Successfully”*) appears after each save, the
+   add-on **accepts it for you** and records the message.
+
+> **Your sheet is authoritative.** Because the add-on clears the Date of
+> Application on every row of a registration before filling, any worker **not** in
+> your sheet has their demand **removed** for that registration when it saves — only
+> the workers you listed keep a demand. Include everyone you want for each
+> registration.
 
 ### It’s built for long sheets on a slow portal
 - **Resume:** progress is saved continuously. If the portal hangs, your PC
