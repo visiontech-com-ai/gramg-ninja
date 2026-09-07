@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy — GramG Ninja</title>
+<meta name="description" content="Privacy policy for the GramG Ninja Chrome/Edge extension. Everything runs locally in your browser; no data is sent to any server.">
+<link rel="canonical" href="https://visiontech-com-ai.github.io/gramg-ninja/privacy.html">
+<link rel="icon" type="image/png" href="vbg-cert-autofill/icons/gramg-ninja-logo-sq.png">
+<meta name="robots" content="index, follow">
+<style>
+  :root{--ink:#1a1f2e;--muted:#5b6472;--blue:#224aaa;--line:#e3e7f0;--bg:#f5f7fb;--card:#fff;--ok:#137333}
+  @media (prefers-color-scheme:dark){:root:not([data-theme=light]){--ink:#e7ebf3;--muted:#9aa3b2;--blue:#7ea2ff;--line:#28304a;--bg:#0b1020;--card:#121a2e}}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Segoe UI",system-ui,Arial,sans-serif;color:var(--ink);background:var(--bg);line-height:1.6}
+  .wrap{max-width:820px;margin:0 auto;padding:1.5rem 1.1rem 4rem}
+  header{display:flex;align-items:center;gap:.7rem;padding:.4rem 0 1rem;border-bottom:2px solid var(--line);margin-bottom:1.4rem}
+  header img{height:44px;width:auto;display:block}
+  header .t b{font-size:1.15rem}
+  header .t div{font-size:.82rem;color:var(--muted)}
+  header a{margin-left:auto;color:var(--blue);text-decoration:none;font-weight:600;font-size:.85rem}
+  h1{font-size:1.5rem;margin:.2rem 0 .3rem}
+  .eff{color:var(--muted);font-size:.85rem;margin-bottom:1.3rem}
+  h2{font-size:1.1rem;margin:1.6rem 0 .5rem;color:var(--blue)}
+  p,li{color:var(--ink)}
+  ul{padding-left:1.2rem}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.9rem 1.1rem;margin:1rem 0}
+  .tldr{background:#e7f4ec;border-color:#bfe3cd;color:#0f5132}
+  @media (prefers-color-scheme:dark){:root:not([data-theme=light]) .tldr{background:#0f2a1b;border-color:#1c5236;color:#7ee2a4}}
+  code{background:rgba(127,127,127,.16);padding:.05rem .35rem;border-radius:5px;font-size:.9em}
+  table{border-collapse:collapse;width:100%;margin:.6rem 0;font-size:.92rem}
+  th,td{border:1px solid var(--line);padding:.5rem .6rem;text-align:left;vertical-align:top}
+  th{background:rgba(127,127,127,.08);color:var(--blue)}
+  footer{margin-top:2.4rem;padding-top:1rem;border-top:1px solid var(--line);color:var(--muted);font-size:.82rem}
+  a{color:var(--blue)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img src="vbg-cert-autofill/icons/gramg-ninja-logo-sq.png" alt="GramG Ninja">
+    <div class="t"><b>GramG Ninja</b><div>by Vision Technologies and Robotics</div></div>
+    <a href="./">← Home</a>
+  </header>
+
+  <h1>Privacy Policy</h1>
+  <div class="eff">Effective date: 7 September 2026 · Applies to the <b>GramG Ninja</b> browser extension for Chrome and Edge.</div>
+
+  <div class="card tldr">
+    <b>In short:</b> GramG Ninja runs entirely inside your browser. It does <b>not</b> send your data to us or
+    to any third-party server, has <b>no analytics or tracking</b>, shows <b>no ads</b>, and does <b>not</b>
+    sell or share your data. Everything you enter or process stays on your device.
+  </div>
+
+  <h2>1. Who we are</h2>
+  <p>GramG Ninja is a free productivity extension published by <b>Vision Technologies and Robotics</b>. It helps
+  authorized users of the Government of India / State Government <b>VB-G RAM G</b> (Viksit Bharat – Rozgar &amp;
+  Aajeevika Mission, Gramin / MGNREGA) portal (<code>*.dord.gov.in</code>) complete routine data-entry and
+  reporting tasks faster. It is an independent tool and is not affiliated with, or endorsed by, any government body.</p>
+
+  <h2>2. What the extension stores — and where</h2>
+  <p>All storage is <b>local to your browser/device</b>. The extension has no backend and no account system.</p>
+  <table>
+    <tr><th>Data</th><th>Why</th><th>Where it is kept</th></tr>
+    <tr><td>Your <b>signing details</b> (name, designation, department, mobile, email)</td><td>To fill the Work Entry certificate blocks for you</td><td><code>chrome.storage</code> (see §3 on Chrome sync)</td></tr>
+    <tr><td><b>Settings</b> and <b>saved join recipes</b> (which report pages to combine)</td><td>To remember your preferences and offer one-click re-runs</td><td><code>chrome.storage.local</code></td></tr>
+    <tr><td><b>Caste register cache</b> (Job Card number → caste), taken from the portal's Registration Application Register you open</td><td>To show the caste-wise wage-list amount breakup without re-opening the register each time</td><td><code>chrome.storage.local</code> (on your device only)</td></tr>
+    <tr><td><b>Work Demand run progress</b> (registration numbers, applicant names, dates, status) while a bulk autofill is in progress</td><td>To let you resume a long sheet after an interruption</td><td>The portal page's <code>localStorage</code>, in your browser</td></tr>
+    <tr><td>Report tables and PDFs you choose to process</td><td>To export CSV/JSON, build summaries, or compress oversized scans</td><td>Held in memory during the action; not persisted or transmitted</td></tr>
+  </table>
+
+  <h2>3. Chrome account sync</h2>
+  <p>Your signing details may be saved with <code>chrome.storage.sync</code> so they survive a reinstall and follow
+  you to the same Chrome profile on another computer. If you are signed in to Chrome, Google mirrors this small
+  amount of data through your own Google account; that transfer is handled by Google under
+  <a href="https://policies.google.com/privacy" rel="noopener">Google's Privacy Policy</a>, not by us, and we never
+  receive it. If you are not signed in to Chrome, the data stays only on your device.</p>
+
+  <h2>4. What the extension does NOT do</h2>
+  <ul>
+    <li>It does not send your data to Vision Technologies and Robotics or to any third-party server.</li>
+    <li>It contains no analytics, telemetry, tracking pixels, or advertising.</li>
+    <li>It does not sell, rent, or share your data with anyone.</li>
+    <li>It does not read or collect data from websites other than when you explicitly act (see §6).</li>
+    <li>It does not run remote or hosted code — all libraries (pdf.js, jsPDF, SheetJS) are bundled and run offline.</li>
+  </ul>
+
+  <h2>5. Sensitive / third-party data</h2>
+  <p>The caste-wise wage breakup uses caste values that already exist in the portal's public Registration
+  Application Register, which you as an authorized officer access on the portal. GramG Ninja only caches this
+  <b>locally on your device</b> to compute totals; it is never uploaded anywhere. You can clear it at any time
+  (see §8). Please use this feature only for legitimate, authorized administrative work.</p>
+
+  <h2>6. Permissions and why they are needed</h2>
+  <table>
+    <tr><th>Permission</th><th>Why</th></tr>
+    <tr><td><code>storage</code>, <code>unlimitedStorage</code></td><td>Save your signing details, settings, saved recipes, and the caste cache locally. Unlimited storage lets the caste cache grow across many Gram Panchayats without hitting the small default quota.</td></tr>
+    <tr><td><code>activeTab</code>, <code>scripting</code></td><td>When you click the toolbar or a button, run the fill/extract logic on the page you are viewing.</td></tr>
+    <tr><td><code>tabs</code></td><td>List your open report tabs so you can pick which ones to consolidate, and show the toolbar re-run badge when a saved recipe's pages are open. Only tab URLs/titles are read, on your device.</td></tr>
+    <tr><td>Host access to <code>*.dord.gov.in</code></td><td>The extension's core features run on the VB-G RAM G portal pages.</td></tr>
+    <tr><td>Optional broad host access (<code>*://*/*</code>)</td><td><b>Optional and requested only at runtime, with your explicit approval</b>, so the "Extract this page" data tool can read tabular data from a report page whose address it cannot know in advance. It is not requested at install and is never used silently.</td></tr>
+  </table>
+
+  <h2>7. Data retention</h2>
+  <p>Data stays until you remove it: uninstalling the extension removes its <code>chrome.storage</code> data, and
+  clearing the site's browser data removes the portal <code>localStorage</code>. Synced signing details are also
+  removed from your Google account when Chrome next syncs after uninstall.</p>
+
+  <h2>8. How to delete your data</h2>
+  <ul>
+    <li><b>Signing details, settings, caste cache:</b> open the extension's options and clear the fields, or remove the extension from <code>chrome://extensions</code>.</li>
+    <li><b>Work Demand progress:</b> use <b>Start over</b> in the Work Demand panel, or clear site data for the portal.</li>
+  </ul>
+
+  <h2>9. Children</h2>
+  <p>GramG Ninja is a workplace tool for government administrative staff and is not directed to children.</p>
+
+  <h2>10. Changes to this policy</h2>
+  <p>If this policy changes, we will update this page and its effective date. Material changes will also be noted
+  in the extension's release notes.</p>
+
+  <h2>11. Contact</h2>
+  <p>Questions or requests: <a href="mailto:subho@visiontech.com.in">subho@visiontech.com.in</a> — Vision Technologies and Robotics.</p>
+
+  <footer>
+    © 2026 Vision Technologies and Robotics · GramG Ninja ·
+    <a href="./">Project page</a> ·
+    <a href="vbg-cert-autofill/install-guide.html">Install &amp; use guide</a>
+  </footer>
+</div>
+</body>
+</html>
