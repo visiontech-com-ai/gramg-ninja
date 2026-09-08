@@ -396,6 +396,18 @@
     s.className = "st " + (kind || "");
   }
 
+  /* ---------------- rate & share prompt (every 7 days) ---------------- */
+  var STORE_URL = "https://chromewebstore.google.com/detail/gramg-ninja/aafcpdejpfbkcnglhihleoiaalnfhlko";
+  var RATE_KEY = "gramg_rate_next", RATE_PERIOD = 7 * 24 * 60 * 60 * 1000;   // shared across both widgets (same origin)
+  function rateNext() { try { return parseInt(localStorage.getItem(RATE_KEY) || "0", 10) || 0; } catch (e) { return 0; } }
+  function snoozeRate() { try { localStorage.setItem(RATE_KEY, String(Date.now() + RATE_PERIOD)); } catch (e) {} if (sel.vbg_rate) sel.vbg_rate.hidden = true; }
+  function maybeShowRate() {
+    if (!sel.vbg_rate) return;
+    var n = rateNext();
+    if (!n) { snoozeRate(); return; }          // first run → arm for 7 days, don't nag immediately
+    sel.vbg_rate.hidden = Date.now() < n;
+  }
+
   function showMap(on) {
     if (sel.vbg_map) sel.vbg_map.style.display = on ? "block" : "none";
   }
@@ -462,9 +474,23 @@
     root.appendChild(box);
 
     ["vbg_head", "vbg_body", "vbg_signer", "vbg_pick", "vbg_folder",
-     "vbg_map", "vbg_rows", "vbg_fill", "vbg_status", "vbg_min"].forEach(function (id) {
+     "vbg_map", "vbg_rows", "vbg_fill", "vbg_status", "vbg_min",
+     "vbg_logo", "vbg_ver", "vbg_rate", "vbg_rate_go", "vbg_rate_share", "vbg_rate_x"].forEach(function (id) {
       sel[id] = root.getElementById(id);
     });
+
+    try {
+      if (sel.vbg_logo && chrome && chrome.runtime && chrome.runtime.getURL) sel.vbg_logo.src = chrome.runtime.getURL("icons/icon48.png");
+      if (sel.vbg_ver && chrome && chrome.runtime && chrome.runtime.getManifest) sel.vbg_ver.textContent = chrome.runtime.getManifest().version;
+    } catch (e) {}
+
+    if (sel.vbg_rate_go) sel.vbg_rate_go.addEventListener("click", function () { try { window.open(STORE_URL + "/reviews", "_blank", "noopener"); } catch (e) {} snoozeRate(); });
+    if (sel.vbg_rate_share) sel.vbg_rate_share.addEventListener("click", function () {
+      try { if (navigator.clipboard) { navigator.clipboard.writeText(STORE_URL); status("Store link copied — share it!", "ok"); } else { window.open(STORE_URL, "_blank", "noopener"); } } catch (e) { try { window.open(STORE_URL, "_blank", "noopener"); } catch (e2) {} }
+      snoozeRate();
+    });
+    if (sel.vbg_rate_x) sel.vbg_rate_x.addEventListener("click", snoozeRate);
+    maybeShowRate();
 
     sel.vbg_pick.addEventListener("click", function () { sel.vbg_folder.click(); });
     sel.vbg_folder.addEventListener("change", function (e) {
@@ -518,7 +544,9 @@
     "box-shadow:0 8px 28px rgba(0,0,0,.28);overflow:hidden}" +
     ".hd{background:#224aaa;color:#fff;padding:8px 10px;display:flex;align-items:center;justify-content:space-between}" +
     ".hd b{font-size:13px;font-weight:600}" +
-    ".mn{cursor:pointer;background:rgba(255,255,255,.2);border:none;color:#fff;width:22px;height:22px;border-radius:5px;font-size:15px;line-height:1}" +
+    ".hdl{display:flex;align-items:center;gap:7px;min-width:0}" +
+    ".logo{width:20px;height:20px;border-radius:4px;flex:0 0 auto;background:#fff}" +
+    ".mn{cursor:pointer;background:rgba(255,255,255,.2);border:none;color:#fff;width:22px;height:22px;border-radius:5px;font-size:15px;line-height:1;flex:0 0 auto}" +
     ".bd{padding:10px;max-height:78vh;overflow:auto}" +
     ".signer{font-size:11.5px;padding:7px 9px;border-radius:7px;margin-bottom:8px;line-height:1.35}" +
     ".signer.ok{background:#eef3fb;color:#224aaa}" +
@@ -538,12 +566,20 @@
     ".fn.ok{color:#137333}.fn.miss{color:#c5221f}.fn.over{color:#c5221f;font-weight:700}" +
     ".st{margin-top:8px;font-size:12px;padding:7px 9px;border-radius:6px;background:#f2f4f8;min-height:16px;line-height:1.35}" +
     ".st.ok{background:#e6f4ea;color:#137333}.st.warn{background:#fef7e0;color:#9a6700}" +
-    ".hint{font-size:11px;color:#666;margin-top:6px;line-height:1.35}";
+    ".hint{font-size:11px;color:#666;margin-top:6px;line-height:1.35}" +
+    ".disclaimer{margin-top:9px;font-size:9.5px;color:#8a92a0;line-height:1.35;background:#fbfbfd;border:1px solid #eef0f4;border-radius:6px;padding:5px 7px}" +
+    ".foot{margin-top:8px;text-align:center;font-size:10px;color:#8a92a0;line-height:1.35}" +
+    ".foot a.vt{color:#224aaa;text-decoration:none}.foot a.vt:hover{text-decoration:underline}" +
+    ".rate{display:flex;align-items:center;justify-content:space-between;gap:6px;background:#fff8e6;border:1px solid #f2d98a;border-radius:7px;padding:6px 8px;margin-bottom:8px;font-size:11px;color:#7a5a00}" +
+    ".rate-msg{line-height:1.3}.rate-btns{display:flex;gap:4px;flex:0 0 auto}" +
+    ".rlink{background:#224aaa;color:#fff;border:none;border-radius:5px;padding:3px 8px;font-size:11px;font-weight:600;cursor:pointer}.rlink:hover{background:#1a3a86}" +
+    ".rx{background:transparent;border:none;color:#9a6700;font-size:15px;line-height:1;cursor:pointer;padding:0 2px}";
 
   var HTML =
-    '<div class="hd" id="vbg_head"><b>GramG Ninja · Certificate Auto-Fill</b>' +
+    '<div class="hd" id="vbg_head"><span class="hdl"><img class="logo" id="vbg_logo" alt=""><b>GramG Ninja · Certificate Auto-Fill</b></span>' +
     '<button class="mn" id="vbg_min" title="Minimise">–</button></div>' +
     '<div class="bd" id="vbg_body">' +
+      '<div class="rate" id="vbg_rate" hidden><span class="rate-msg">⭐ Finding GramG Ninja useful? Please rate &amp; share.</span><span class="rate-btns"><button class="rlink" id="vbg_rate_go">Rate</button><button class="rlink" id="vbg_rate_share">Share</button><button class="rx" id="vbg_rate_x" title="Later">×</button></span></div>' +
       '<div class="signer" id="vbg_signer"></div>' +
       '<div class="sec">Certificates (PDF)</div>' +
       '<button class="btn pick" id="vbg_pick">① Choose certificate folder…</button>' +
@@ -554,6 +590,8 @@
       '</div>' +
       '<div class="st" id="vbg_status">Choose the folder that holds this scheme’s certificate PDFs.</div>' +
       '<div class="hint">Each PDF just needs its block number <b>1–8</b> in the name — <b>1.pdf</b>, <b>02.pdf</b>, <b>cert-3.pdf</b> all work. Scans over the <b>1 MB</b> server limit are <b>compressed automatically</b> to fit. DPR &amp; Convergence are set to <b>Yes</b> automatically.</div>' +
+      '<div class="disclaimer">⚠ Automated filling can make mistakes. This tool assists — it does not replace you. Review the form and the attached files, keep a person in the loop, and confirm before you Save. Use at your own responsibility.</div>' +
+      '<div class="foot"><a class="vt" href="https://visiontech.com.in" target="_blank" rel="noopener"><b>VisionTech</b></a> — Vision Technologies &amp; Robotics · VB-G RAM G utilities · v<span id="vbg_ver"></span></div>' +
     '</div>';
 
   /* ---------------------- go ---------------------- */

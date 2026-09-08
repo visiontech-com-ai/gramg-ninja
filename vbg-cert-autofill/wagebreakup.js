@@ -44,7 +44,8 @@
       "#dxwbk-card{background:#fff;border-radius:12px;max-width:860px;width:94%;font:14px 'Segoe UI',Arial,sans-serif;color:#1a1f2e;box-shadow:0 12px 40px rgba(0,0,0,.35);overflow:hidden}" +
       ".dxwbk-scroll{overflow-x:auto}" +
       "#dxwbk-hd{background:#1b3a86;color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between}" +
-      "#dxwbk-hd b{font-size:15px}#dxwbk-x{background:none;border:0;color:#fff;font-size:20px;cursor:pointer;line-height:1}" +
+      "#dxwbk-hd b{font-size:15px}#dxwbk-x{background:none;border:0;color:#fff;font-size:20px;cursor:pointer;line-height:1;flex:0 0 auto}" +
+      ".dxwbk-hdl{display:flex;align-items:center;gap:9px;min-width:0}.dxwbk-logo{width:22px;height:22px;border-radius:5px;background:#fff;flex:0 0 auto}" +
       "#dxwbk-bd{padding:16px}" +
       ".dxwbk-tbl{border-collapse:collapse;width:100%;font-size:13px;margin-top:6px}" +
       ".dxwbk-tbl th,.dxwbk-tbl td{border:1px solid #d7deea;padding:7px 12px;text-align:center;white-space:nowrap}" +
@@ -56,6 +57,7 @@
       ".dxwbk-ok{color:#137333;background:#e7f4ea;border:1px solid #b6dcc0;border-radius:8px;padding:8px 10px;font-size:12.5px;margin-top:10px}" +
       ".dxwbk-lbl{font-size:12px;color:#5b6472}.dxwbk-in{padding:6px 8px;border:1px solid #c7cfdd;border-radius:7px;font-size:13px;min-width:220px}" +
       ".dxwbk-foot{margin-top:14px;padding-top:9px;border-top:1px solid #eef1f7;text-align:center;font-size:11.5px;color:#7a8290}.dxwbk-foot b{color:#1b3a86}" +
+      ".dxwbk-disc{font-size:10px;color:#8a92a0;line-height:1.4;margin-bottom:6px}.dxwbk-foot a.dxwbk-vt{color:#1b3a86;text-decoration:none}.dxwbk-foot a.dxwbk-vt:hover{text-decoration:underline}" +
       "#dxwbk-toast{position:fixed;right:18px;bottom:18px;z-index:2147483646;background:#137333;color:#fff;padding:10px 14px;border-radius:8px;" +
       "font:600 12.5px 'Segoe UI',Arial,sans-serif;box-shadow:0 3px 12px rgba(0,0,0,.28)}";
     (document.head || document.documentElement).appendChild(s);
@@ -74,8 +76,13 @@
     ov.addEventListener("click", function (e) { if (e.target === ov) closeModal(); });
     var card = document.createElement("div"); card.id = "dxwbk-card";
     var hd = document.createElement("div"); hd.id = "dxwbk-hd";
-    var b = document.createElement("b"); b.textContent = title; var x = document.createElement("button"); x.id = "dxwbk-x"; x.textContent = "✕"; x.addEventListener("click", closeModal);
-    hd.appendChild(b); hd.appendChild(x);
+    var hdl = document.createElement("span"); hdl.className = "dxwbk-hdl";
+    var logo = document.createElement("img"); logo.className = "dxwbk-logo"; logo.alt = "";
+    try { if (chrome && chrome.runtime && chrome.runtime.getURL) logo.src = chrome.runtime.getURL("icons/icon48.png"); } catch (e) {}
+    var b = document.createElement("b"); b.textContent = "GramG Ninja · " + title;
+    hdl.appendChild(logo); hdl.appendChild(b);
+    var x = document.createElement("button"); x.id = "dxwbk-x"; x.textContent = "✕"; x.addEventListener("click", closeModal);
+    hd.appendChild(hdl); hd.appendChild(x);
     var bd = document.createElement("div"); bd.id = "dxwbk-bd"; buildBody(bd);
     card.appendChild(hd); card.appendChild(bd); ov.appendChild(card); document.body.appendChild(ov);
   }
@@ -164,7 +171,10 @@
         bd.appendChild(w);
       }
       var foot = document.createElement("div"); foot.className = "dxwbk-foot";
-      foot.innerHTML = '<b>VisionTech</b> — Vision Technologies &amp; Robotics · VB-G RAM G utilities';
+      var ver = ""; try { if (chrome && chrome.runtime && chrome.runtime.getManifest) ver = chrome.runtime.getManifest().version; } catch (e) {}
+      foot.innerHTML =
+        '<div class="dxwbk-disc">⚠ Figures are computed from the saved register and this page. Verify totals against the portal before relying on them — keep a person in the loop.</div>' +
+        '<div><a class="dxwbk-vt" href="https://visiontech.com.in" target="_blank" rel="noopener"><b>VisionTech</b></a> — Vision Technologies &amp; Robotics · VB-G RAM G utilities' + (ver ? ' · v' + ver : '') + '</div>';
       bd.appendChild(foot);
     });
   }
@@ -176,7 +186,10 @@
   function reportReady() { return /Download\s*In\s*Excel/i.test(pageText()) || hasJobCardRow(); }
   function classifyAndFire() {
     var t = pageText();
-    if (/Registration Application Register/i.test(t) && hasJobCardRow()) { cacheRegister(); return true; }
+    // Some report headings live only in the page <title> (e.g. the static "panchregpeople…" register
+    // export), so match the register on title + body, not body alone.
+    var titled = (document.title || "") + "\n" + t;
+    if (/Registration Application Register/i.test(titled) && hasJobCardRow()) { cacheRegister(); return true; }
     if (/Wage\s*List/i.test(t) && /Wage\s*List\s*No/i.test(t) && hasJobCardRow()) { IS_WAGE = true; doBreakup(); return true; }
     return false;
   }

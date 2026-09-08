@@ -32,10 +32,9 @@
   };
 
   var STEP_TIMEOUT = 90000;   // wait up to 90s per async postback (govt portal is slow)
-  var PROCEED_WAIT = 12000;   // if no reload within 12s after Proceed, treat as blocked
+  var PROCEED_WAIT = 90000;   // wait this long for the portal's confirmation after Proceed (it can take ~60s)
   var PACE = 500;             // small pause between async steps
-  var GROUP_RETRIES = 2;      // attempts per registration before giving up
-  var MAX_CONSEC_FAIL = 4;    // circuit breaker
+  var APPLICANT_RETRIES = 2;  // extra retries per applicant before giving up (so up to 3 tries), then skip that applicant
   var NAME_THRESHOLD = 0.82;
 
   /* ---------------------- dialog overrides ---------------------- */
@@ -54,6 +53,38 @@
   function readLastAlert() { try { return JSON.parse(localStorage.getItem(LS_ALERT) || "null"); } catch (e) { return null; } }
   function clearLastAlert() { try { localStorage.removeItem(LS_ALERT); } catch (e) {} }
 
+  // This portal shows SUCCESS as a JS alert ("Data Entered Successfully"), but errors and the
+  // duplicate notice as an ON-SCREEN LINE only (no alert), e.g.
+  //   "Demand of Saraswati Mandi for period 08/09/2026-12/09/2026 is already there ."
+  // That element has no stable id/class, so match the portal's demand-result text. Leaf nodes only.
+  var INLINE_RE = /Demand of .+? for period|is already there|already exists|Data Entered Successfully|entered successfully/i;
+  // Classify a portal message. "already there"/"duplicate" mean the demand IS present → success.
+  var OK_RE = /success|saved|entered|accept|complete|generat|already|duplicate/i;
+  var ERR_RE = /invalid|\berror\b|fail|wrong|cannot|not\s+(allowed|valid|found|entered)|please\s/i;
+  function readInlineResult() {
+    try {
+      var els = document.querySelectorAll("font, b, span, td, label, div, p");
+      for (var i = 0; i < els.length; i++) {
+        var el = els[i];
+        if (el.children && el.children.length) continue;
+        var t = (el.textContent || "").replace(/\s+/g, " ").trim();
+        if (t && t.length <= 240 && INLINE_RE.test(t)) return t;
+      }
+    } catch (e) {}
+    return "";
+  }
+  // Blank any existing result line so that, after Proceed, only the NEW message is read.
+  function clearInlineResult() {
+    try {
+      var els = document.querySelectorAll("font, b, span, td, label, div, p");
+      for (var i = 0; i < els.length; i++) {
+        var el = els[i];
+        if (el.children && el.children.length) continue;
+        if (INLINE_RE.test(el.textContent || "")) el.textContent = "";
+      }
+    } catch (e) {}
+  }
+
   /* ---------------------- run state (localStorage) ---------------------- */
   function loadRun() { try { return JSON.parse(localStorage.getItem(LS_RUN) || "null"); } catch (e) { return null; } }
   function saveRun(r) {
@@ -63,7 +94,7 @@
   function notifyUI() { try { window.postMessage({ source: "DXWD_DRV", type: "sync" }, "*"); } catch (e) {} }
   function log(r, level, text) {
     (r.log = r.log || []).push({ t: nowMs(), level: level, text: text });
-    if (r.log.length > 400) r.log = r.log.slice(-400);
+    if (r.log.length > 2000) r.log = r.log.slice(-2000);
   }
 
   /* ---------------------- small helpers ---------------------- */
@@ -208,37 +239,39 @@
     }, STEP_TIMEOUT);
   }
 
-  // Click Proceed. On this portal Proceed submits via an ASYNC UpdatePanel postback (no full
-  // reload) and shows a "Data Entered Successfully" alert. So resolve on any of: a full reload
-  // (older behaviour), the async postback completing, or a captured alert. {blocked} only if none
-  // of those happen within PROCEED_WAIT. (readLastAlert must have been cleared before calling.)
+  // Click Proceed and WAIT for the portal's definitive response:
+  //   • SUCCESS  -> a JS alert ("Data Entered Successfully")  (captured via readLastAlert)
+  //   • ERROR / duplicate -> an on-screen line only, no alert (captured via readInlineResult)
+  //   • rarely   -> a full page reload
+  // The portal can take up to ~60s, so we keep polling until one appears or PROCEED_WAIT elapses.
+  // {responded:true} means we got a real answer (alert or on-screen line) → the caller must NOT retry.
+  // {responded:false} (timeout) means no answer at all → the caller may retry (transient hang).
+  // (readLastAlert must have been cleared and the on-screen line blanked before calling.)
   function clickProceed() {
     return new Promise(function (resolve) {
-      var done = false, prmHandler = null, timer = null;
+      var done = false, timer = null;
       function finish(res) {
         if (done) return; done = true;
         try { window.removeEventListener("beforeunload", onUnload); } catch (e) {}
         try { window.removeEventListener("unload", onUnload); } catch (e) {}
-        if (prmHandler) { try { prm().remove_endRequest(prmHandler); } catch (e) {} }
         if (timer) clearTimeout(timer);
         resolve(res);
       }
-      function onUnload() { finish({ submitted: true, reloaded: true }); }
+      function onUnload() { finish({ submitted: true, reloaded: true, responded: true }); }
       window.addEventListener("beforeunload", onUnload, { once: true });
       window.addEventListener("unload", onUnload, { once: true });
-      try {
-        if (prmReady()) {
-          prmHandler = function () { setTimeout(function () { finish({ submitted: true, alert: readLastAlert() }); }, 250); };
-          prm().add_endRequest(prmHandler);
-        }
-      } catch (e) {}
-      try { var b = $(IDS.proceed); if (!b) return finish({ blocked: true, reason: "Proceed button missing" }); b.click(); } catch (e) {}
+      try { var b = $(IDS.proceed); if (!b) return finish({ blocked: true, responded: false, reason: "Proceed button missing" }); b.click(); } catch (e) { return finish({ blocked: true, responded: false, reason: String(e) }); }
       var t0 = nowMs();
       (function tick() {
         if (done) return;
         var a = readLastAlert();
-        if (a && a.msg) return finish({ submitted: true, alert: a });
-        if (nowMs() - t0 > PROCEED_WAIT) return finish({ blocked: true, reason: "no confirmation", alert: readLastAlert() });
+        if (a && a.msg) return finish({ submitted: true, responded: true, msg: a.msg, via: "alert" });
+        var im = readInlineResult();
+        if (im) return finish({ submitted: true, responded: true, msg: im, via: "onscreen" });
+        if (stopping()) return finish({ stopped: true });   // Stop clicked mid-wait → abort promptly
+        if (nowMs() - t0 > PROCEED_WAIT) {
+          return finish({ blocked: true, responded: false, reason: "no confirmation after " + Math.round(PROCEED_WAIT / 1000) + "s" });
+        }
         timer = setTimeout(tick, 300);
       })();
     });
@@ -256,15 +289,62 @@
     var base = UPFX + pfx.substring(PFX.length).replace(/_/g, "$");
     try { return !!document.querySelector('input[type="radio"][name="' + base + '$rbnAadhar"]:checked'); } catch (e) { return true; }
   }
+  // Paranoia backstop so a pathological portal can never loop a registration forever:
+  // (workers + 1) submit rounds per allowed applicant-retry, plus a little slack.
+  function driveCap(g) { return ((g.workers || []).length + 1) * (APPLICANT_RETRIES + 1) + 3; }
   function nextGroup(r) {
     for (var i = 0; i < r.groups.length; i++) {
       var g = r.groups[i];
-      if (pendingWorkers(g).length && (g.attempts || 0) <= GROUP_RETRIES) { g.idx = i; return g; }
+      if (!pendingWorkers(g).length) continue;
+      if ((g.drives || 0) >= driveCap(g)) {
+        // stuck — terminate whatever is still pending so the run moves on
+        pendingWorkers(g).forEach(function (w) {
+          w.status = "error"; w.message = w.message || "gave up (max attempts reached)"; w.at = nowMs();
+        });
+        log(r, "err", g.regNo + ": stopped after " + g.drives + " submit rounds — remaining applicant(s) marked error");
+        continue;
+      }
+      g.idx = i; return g;
     }
     return null;
   }
   function markGroupWorkers(g, status, message) {
     (g.workers || []).forEach(function (w) { if (w.status !== "done") { w.status = status; w.message = message; w.at = nowMs(); } });
+  }
+  // Record one failed submit against a single applicant. Retry up to APPLICANT_RETRIES more
+  // times (leave pending so the registration re-submits it), then mark it error and exclude it.
+  function bumpFail(r, g, w, msg, fallbackReason) {
+    w.attempts = (w.attempts || 0) + 1;
+    var text = msg || fallbackReason || "portal reported an error";
+    if (w.attempts > APPLICANT_RETRIES) {
+      w.status = "error"; w.message = text; w.at = nowMs();
+      log(r, "err", g.regNo + " · " + w.applicant + ": " + text + " — giving up after " + w.attempts + " attempt(s)");
+    } else {
+      w.message = text; w.at = nowMs();   // keep the latest portal message on the (still pending) row
+      log(r, "warn", g.regNo + " · " + w.applicant + ": " + text +
+        " — will retry (" + w.attempts + " of " + (APPLICANT_RETRIES + 1) + ")");
+    }
+  }
+  // DEFINITIVE response (the portal answered with a success alert or an on-screen line): record it
+  // and DO NOT retry — a shown message is the portal's final word for this submit.
+  //   ok  -> every submitted applicant is done.
+  //   !ok -> every submitted applicant is error (the on-screen line is the reason). No retry: if the
+  //          portal actually saved some of them, a manual re-run shows "already there" = done.
+  function finalizeProceed(r, g, filled, ok, msg) {
+    var fw = (g.workers || []).filter(function (w) { return filled.indexOf(w.applicant) >= 0; });
+    fw.forEach(function (w) {
+      w.status = ok ? "done" : "error";
+      w.message = msg || (ok ? "submitted" : "portal reported an error");
+      w.at = nowMs();
+    });
+    log(r, ok ? "ok" : "err", g.regNo + ": " + (msg || (ok ? "submitted" : "error")) +
+      " (" + fw.length + " applicant" + (fw.length !== 1 ? "s" : "") + ")");
+  }
+  // NO response at all (Proceed timed out with neither an alert nor an on-screen line): treat as a
+  // transient portal hang and retry per applicant (up to APPLICANT_RETRIES), then give up on them.
+  function retryProceed(r, g, filled, reason) {
+    var fw = (g.workers || []).filter(function (w) { return filled.indexOf(w.applicant) >= 0; });
+    fw.forEach(function (w) { bumpFail(r, g, w, null, reason); });
   }
   function finish(r) {
     var ok = 0, err = 0;
@@ -280,37 +360,32 @@
     saveRun(r); restoreDialogs();
   }
 
-  // After a Proceed reload, record the result of the group we had submitted.
+  // After a Proceed that caused a FULL reload (rare on this portal), record the result. A reload is a
+  // definitive outcome; read whatever message is present and finalize (no retry).
   function resolveProceed(r) {
     var pp = r.pendingProceed; if (!pp) return;
     var g = r.groups[pp.groupIdx]; r.pendingProceed = null;
     if (!g) { saveRun(r); return; }
     var a = readLastAlert(); clearLastAlert();
-    var msg = a ? a.msg : "";
-    // A Proceed that actually reloaded the page almost always saved. Detect success positively
-    // (e.g. "Data Entered Successfully") and only treat as error on an explicit error message.
-    var okRe = /success|saved|entered|accept|complete|generat/i;
-    var errRe = /invalid|\berror\b|fail|wrong|already|duplicate|cannot|not\s+(allowed|valid|found|entered)|please\s/i;
-    var isOk = okRe.test(msg);
-    var done = isOk || !errRe.test(msg);   // default to success when reloaded with no explicit error
-    var submitted = pp.workerKeys || [];
-    (g.workers || []).forEach(function (w) {
-      if (submitted.indexOf(w.applicant) < 0) return;
-      w.status = done ? "done" : "error";
-      w.message = msg || (done ? "submitted" : "portal reported an error");
-      w.at = nowMs();
-    });
-    if (done) { r.consecFail = 0; log(r, "ok", g.regNo + ": " + (msg || "submitted")); }
-    else { r.consecFail = (r.consecFail || 0) + 1; log(r, "err", g.regNo + ": " + (msg || "error")); }
+    var msg = (a && a.msg) || readInlineResult() || "";
+    var isOk = OK_RE.test(msg);
+    var done = isOk || !ERR_RE.test(msg);   // default to success when reloaded with no explicit error
+    finalizeProceed(r, g, pp.workerKeys || [], done, msg || (done ? "submitted" : "portal reported an error"));
     saveRun(r);
   }
 
   /* ---------------------- drive one registration ---------------------- */
+  // Stop is requested from the UI by writing stopRequested/active=false to the shared run.
+  // Re-read it (localStorage) at each checkpoint so a Stop takes effect mid-registration —
+  // especially BEFORE Proceed, so a pending registration is never submitted after Stop.
+  function stopping() { var rr = loadRun(); return !rr || rr.stopRequested || !rr.active; }
+
   // returns {reloaded:true} if Proceed was clicked (page is navigating away)
   async function driveGroup(r, g) {
-    g.attempts = (g.attempts || 0) + 1; saveRun(r);
-    dbg("drive", g.regNo, "· attempt", g.attempts, "· pending", pendingWorkers(g).length);
+    g.drives = (g.drives || 0) + 1; saveRun(r);
+    dbg("drive", g.regNo, "· round", g.drives, "· pending", pendingWorkers(g).length);
     try {
+      if (stopping()) { dbg("stop before drive", g.regNo); return { reloaded: false }; }
       if (loggedOut()) { halt(r, "Portal session/page changed — log in, reopen the Work Demand page, then click Resume."); return { reloaded: false, halted: true }; }
 
       // -- village (skip if already selected) --
@@ -361,6 +436,7 @@
       var submitted = [];
       var pend = pendingWorkers(g);
       for (var i = 0; i < pend.length; i++) {
+        if (stopping()) { dbg("stop during fill", g.regNo); log(r, "warn", g.regNo + ": stopped before submitting."); saveRun(r); return { reloaded: false }; }
         var w = pend[i];
         var row = findWorkerRow(w.applicant);
         if (!row) { w.status = "error"; w.message = "name not found in this registration's grid"; w.at = nowMs(); saveRun(r); continue; }
@@ -392,37 +468,48 @@
 
       if (!submitted.length) { log(r, "warn", g.regNo + ": no matching worker filled"); saveRun(r); return { reloaded: false }; }
 
-      // -- Proceed (full reload) --
+      // Last chance to abort before we actually submit. If Stop was clicked while filling, do NOT
+      // Proceed — the filled rows stay pending and are re-submitted on Resume.
+      if (stopping()) { dbg("stop before Proceed", g.regNo); log(r, "warn", g.regNo + ": stop requested — not submitting this registration."); saveRun(r); return { reloaded: false }; }
+
+      // -- Proceed --
       r.pendingProceed = { groupIdx: g.idx, workerKeys: submitted, at: nowMs() };
-      clearLastAlert(); saveRun(r);
+      clearLastAlert(); clearInlineResult(); saveRun(r);   // blank any prior alert/on-screen line first
       log(r, "info", g.regNo + ": submitting " + submitted.length + " worker(s)…"); saveRun(r);
 
       dbg("proceed", g.regNo, submitted.length, "worker(s)");
       var out = await clickProceed();
       dbg("proceed result", g.regNo, out);
       if (out.reloaded) return { reloaded: true }; // full reload → resolveProceed handles it next load
+      if (out.stopped) {                            // Stop clicked during the confirmation wait
+        r.pendingProceed = null;
+        dbg("stop during Proceed wait", g.regNo);
+        log(r, "warn", g.regNo + ": stopped while awaiting confirmation — left pending for Resume.");
+        saveRun(r);
+        return { reloaded: false };                 // workers stay "filled"/pending; loop halts on stop
+      }
 
-      // Async submit (this portal keeps the page): classify from the captured alert, mark here, continue.
+      // Async submit (portal keeps the page).
       r.pendingProceed = null;
-      var msg = out.alert ? out.alert.msg : "";
+      var msg = out.msg || "";
       clearLastAlert();
-      var okRe = /success|saved|entered|accept|complete|generat/i;
-      var errRe = /invalid|\berror\b|fail|wrong|already|duplicate|cannot|not\s+(allowed|valid|found|entered)|please\s/i;
-      var ok = !!out.submitted && (okRe.test(msg) || (!!msg && !errRe.test(msg)));
-      g.workers.forEach(function (w) {
-        if (submitted.indexOf(w.applicant) < 0) return;
-        w.status = ok ? "done" : "error";
-        w.message = msg || (ok ? "submitted" : (out.reason || "no confirmation"));
-        w.at = nowMs();
-      });
-      if (ok) { r.consecFail = 0; log(r, "ok", g.regNo + ": " + (msg || "submitted")); }
-      else { r.consecFail = (r.consecFail || 0) + 1; log(r, "err", g.regNo + ": " + (msg || out.reason || "no confirmation")); }
+      if (out.responded) {
+        // Definitive portal answer (success alert OR on-screen line) → classify and DO NOT retry.
+        // OK_RE catches success/"already there"; ERR_RE guards against "not entered" etc. matching OK_RE.
+        var ok = OK_RE.test(msg) && !ERR_RE.test(msg);
+        finalizeProceed(r, g, submitted, ok, msg);
+      } else {
+        // No answer at all within the wait → transient hang → retry per applicant.
+        retryProceed(r, g, submitted, out.reason || "no confirmation");
+      }
       saveRun(r);
       return { reloaded: false };
     } catch (e) {
-      r.consecFail = (r.consecFail || 0) + 1;
-      log(r, "err", g.regNo + ": " + (e && e.message ? e.message : String(e)) + " (attempt " + g.attempts + ")");
-      if ((g.attempts || 0) > GROUP_RETRIES) markGroupWorkers(g, "error", "gave up after retries: " + (e && e.message ? e.message : e));
+      // A thrown error (timeout, DOM/postback failure) isn't applicant-specific — count it against
+      // every applicant still pending in this registration; those out of retries are marked error.
+      var reason = (e && e.message ? e.message : String(e));
+      log(r, "err", g.regNo + ": " + reason + " (round " + g.drives + ")");
+      pendingWorkers(g).forEach(function (w) { bumpFail(r, g, w, null, reason); });
       saveRun(r);
       return { reloaded: false };
     }
@@ -442,9 +529,12 @@
 
     while (true) {
       r = loadRun();
-      if (!r || !r.active) { restoreDialogs(); return; }
+      if (!r) { restoreDialogs(); return; }
+      // Check stop first — a UI Stop sets BOTH stopRequested and active=false; log it before bailing.
       if (r.stopRequested) { r.active = false; log(r, "warn", "Stopped by user."); saveRun(r); restoreDialogs(); return; }
-      if ((r.consecFail || 0) >= MAX_CONSEC_FAIL) { halt(r, "Stopped after " + r.consecFail + " consecutive failures — check the portal, then click Resume."); return; }
+      if (!r.active) { restoreDialogs(); return; }
+      // No consecutive-failure circuit breaker: each failing applicant is retried (APPLICANT_RETRIES)
+      // then skipped, and the run moves forward through the rest of the sheet.
 
       var g = nextGroup(r);
       if (!g) { finish(r); return; }
@@ -468,6 +558,8 @@
   // Install overrides ASAP so the post-submit alert on this load is captured.
   (function boot() {
     var r = loadRun();
+    dbg("engine loaded (MAIN world) on", location.pathname, "· debug ON — set localStorage dxwd_debug=0 to silence",
+      r && r.active ? "· run ACTIVE, resuming" : "· idle");
     if (r && r.active) overrideDialogs();
     // Fast path: the UI posts "start"/"stop". Don't require ev.source===window — an
     // isolated-world content script's postMessage may not set it as expected.

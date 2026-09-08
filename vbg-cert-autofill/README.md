@@ -188,9 +188,14 @@ it), and **Work Demand To** is computed by the portal from *From + No of Days*.
 - **Resume:** progress is saved continuously. If the portal hangs, your PC
   restarts, or you click **Stop**, just reopen the page and pick the *same* file —
   the button becomes **Resume (X/N done)** and carries on from where it stopped.
-- **Robust:** each step waits up to ~90 s, retries on failure, and **halts safely
-  if your login expires** (log in again and click Resume). One bad row is logged
-  and skipped without stopping the batch.
+- **Per-applicant errors & retries:** a registration can list several applicants, and
+  each is tracked on its own. If the portal rejects one applicant, only **that**
+  applicant is retried (up to twice) and then marked error — the others in the same
+  registration are unaffected and still go through. There is **no run-wide stop** for
+  errors; the batch keeps moving through the rest of the sheet. It still **halts safely
+  if your login expires** (log in again and click Resume). Every applicant's outcome —
+  Success / Error / Skipped, with the portal's exact message and a timestamp — is in
+  the results export.
 - **No-Aadhaar rows are skipped, not failed:** if a worker has no Aadhaar data on
   the portal (the row would demand the Aadhaar choice), that worker is **skipped**
   with the result **“No Aadhaar data available”** — it never blocks the rest of the
@@ -199,7 +204,18 @@ it), and **Work Demand To** is computed by the portal from *From + No of Days*.
   `.xlsx`** (and you can also click **⭳ Export results** any time) with, per worker,
   `Status` (Success / Error / Skipped), the portal’s exact `Entry Result` message,
   and a full `Timestamp`. Then the panel’s grid is cleared, ready for the next batch.
-- **Start over** resets every row to pending.
+  Clicking **⭳ Export results** yourself also **clears the queue afterwards** (unless a
+  run is still active) — the file is saved first, so nothing is lost.
+- **Activity log — stored and downloadable:** the activity log is kept durably in the
+  extension’s own storage (`chrome.storage.local`), so it survives page reloads and a
+  cleared queue. Click **📄 Download log** to save it as an `.xlsx`
+  (`Run · Timestamp · Level · Message`, covering the recent runs). Downloading it also
+  **clears the stored log afterwards**, so each download starts a fresh log.
+- **Start over** resets every row to pending (keeps the loaded sheet).
+- **🗑 Clear queue** discards the loaded sheet and all queued rows entirely — the panel
+  returns to *No sheet loaded* so you can pick a different file. It asks for confirmation
+  (and warns if there is un-exported progress), and is disabled while a run is active —
+  click **Stop** first.
 
 > A debug log (prefix `[GramG-WD]`) is written to the browser console for
 > troubleshooting; turn it off with `localStorage.setItem('dxwd_debug','0')`.
