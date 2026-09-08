@@ -87,11 +87,23 @@
 
   /* ---------------------- run summary ---------------------- */
   function counts(r) {
-    var t = 0, done = 0, err = 0, pend = 0;
+    var t = 0, done = 0, err = 0, skip = 0, pend = 0;
     (r.groups || []).forEach(function (g) {
-      (g.workers || []).forEach(function (w) { t++; if (w.status === "done") done++; else if (w.status === "error") err++; else pend++; });
+      (g.workers || []).forEach(function (w) {
+        t++;
+        if (w.status === "done") done++;
+        else if (w.status === "error") err++;
+        else if (w.status === "skipped") skip++;
+        else pend++;
+      });
     });
-    return { total: t, done: done, err: err, pend: pend, groups: (r.groups || []).length };
+    return { total: t, done: done, err: err, skip: skip, pend: pend, groups: (r.groups || []).length };
+  }
+  function formatTs(ms) {
+    if (!ms) return "";
+    var d = new Date(ms); if (isNaN(d.getTime())) return "";
+    return pad2(d.getDate()) + "/" + pad2(d.getMonth() + 1) + "/" + d.getFullYear() + " " +
+      pad2(d.getHours()) + ":" + pad2(d.getMinutes()) + ":" + pad2(d.getSeconds());
   }
 
   /* ---------------------- panel ---------------------- */
@@ -111,15 +123,15 @@
     }
     var c = counts(r);
     sel.summary.textContent = c.groups + " registration(s), " + c.total + " worker(s) — " +
-      c.done + " done" + (c.err ? ", " + c.err + " error" : "") + ", " + c.pend + " pending" + (r.active ? "  ·  running…" : "");
+      c.done + " done" + (c.err ? ", " + c.err + " error" : "") + (c.skip ? ", " + c.skip + " skipped" : "") + ", " + c.pend + " pending" + (r.active ? "  ·  running…" : "");
 
     // rows
     var html = "", n = 0;
     r.groups.forEach(function (g) {
       g.workers.forEach(function (w) {
         n++;
-        var cls = w.status === "done" ? "ok" : w.status === "error" ? "err" : w.status === "filled" ? "warn" : "";
-        var sy = w.status === "done" ? "✓" : w.status === "error" ? "✕" : w.status === "filled" ? "…" : "•";
+        var cls = w.status === "done" ? "ok" : w.status === "error" ? "err" : (w.status === "skipped" || w.status === "filled") ? "warn" : "";
+        var sy = w.status === "done" ? "✓" : w.status === "error" ? "✕" : w.status === "skipped" ? "⊘" : w.status === "filled" ? "…" : "•";
         html += "<tr>" +
           "<td class='c'>" + n + "</td>" +
           "<td title='" + esc(g.regNo) + "'>" + esc(shortReg(g.regNo)) + "</td>" +
@@ -194,12 +206,12 @@
   }
   function doExport(runArg) {
     var r = runArg || loadRun(); if (!r || !window.XLSX) return false;
-    var aoa = [["Reg No", "Applicant", "Work From", "No of Days", "Date of Application", "Status", "Entry Result", "When"]];
+    var aoa = [["Reg No", "Applicant", "Work From", "No of Days", "Date of Application", "Status", "Entry Result", "Timestamp"]];
     r.groups.forEach(function (g) {
       g.workers.forEach(function (w) {
         aoa.push([g.regNo, w.applicant, w.from, w.days, w.appDate,
-          (w.status === "done" ? "Success" : w.status === "error" ? "Error" : w.status),
-          w.message || "", w.at ? new Date(w.at).toLocaleString() : ""]);
+          (w.status === "done" ? "Success" : w.status === "error" ? "Error" : w.status === "skipped" ? "Skipped" : w.status),
+          w.message || "", formatTs(w.at)]);
       });
     });
     var ws = XLSX.utils.aoa_to_sheet(aoa), wb = XLSX.utils.book_new();
@@ -215,15 +227,15 @@
   function onRunEnded(r) {
     if (!r) return;
     var c = counts(r);
-    var naturalFinish = c.pend === 0 && (c.done + c.err) > 0 && !r.stopRequested;
-    dbg("run ended", { done: c.done, error: c.err, pending: c.pend, stopped: !!r.stopRequested, naturalFinish: naturalFinish });
+    var naturalFinish = c.pend === 0 && (c.done + c.err + c.skip) > 0 && !r.stopRequested;
+    dbg("run ended", { done: c.done, error: c.err, skipped: c.skip, pending: c.pend, stopped: !!r.stopRequested, naturalFinish: naturalFinish });
     if (!naturalFinish) return;
     try { localStorage.setItem(LS_RESULTS, JSON.stringify(r)); } catch (e) {}   // safety copy
     var exported = false;
     try { exported = doExport(r); } catch (e) { dbg("export failed", e && e.message); }
     try { localStorage.removeItem(LS_RUN); localStorage.removeItem(LS_ALERT); } catch (e) {}
     wasActive = false;
-    status("All " + (c.done + c.err) + " record(s) processed — " + c.done + " ok, " + c.err + " error" +
+    status("All " + (c.done + c.err + c.skip) + " record(s) processed — " + c.done + " ok" + (c.err ? ", " + c.err + " error" : "") + (c.skip ? ", " + c.skip + " skipped" : "") +
       (exported ? " · results exported and the grid was cleared." : " · grid cleared (export failed — check pop-up/download settings)."), c.err ? "warn" : "ok");
     dbg("grid cleared after processing");
   }

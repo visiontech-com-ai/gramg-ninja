@@ -191,10 +191,18 @@ it), and **Work Demand To** is computed by the portal from *From + No of Days*.
 - **Robust:** each step waits up to ~90 s, retries on failure, and **halts safely
   if your login expires** (log in again and click Resume). One bad row is logged
   and skipped without stopping the batch.
-- **Export results:** the **⭳ Export results** button downloads a copy of your
-  sheet with `Status / Message / When` columns added, so you have a record of what
-  was submitted.
+- **No-Aadhaar rows are skipped, not failed:** if a worker has no Aadhaar data on
+  the portal (the row would demand the Aadhaar choice), that worker is **skipped**
+  with the result **“No Aadhaar data available”** — it never blocks the rest of the
+  registration. Enter those manually.
+- **Results export:** when the whole batch finishes it **auto-exports a results
+  `.xlsx`** (and you can also click **⭳ Export results** any time) with, per worker,
+  `Status` (Success / Error / Skipped), the portal’s exact `Entry Result` message,
+  and a full `Timestamp`. Then the panel’s grid is cleared, ready for the next batch.
 - **Start over** resets every row to pending.
+
+> A debug log (prefix `[GramG-WD]`) is written to the browser console for
+> troubleshooting; turn it off with `localStorage.setItem('dxwd_debug','0')`.
 
 > The village is worked out from the Reg No (e.g. `WB-06-003-006-001/…` →
 > village `3206003006001`). If a village or registration isn’t in the page’s

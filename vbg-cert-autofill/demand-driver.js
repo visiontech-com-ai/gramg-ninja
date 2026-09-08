@@ -245,7 +245,17 @@
   }
 
   /* ---------------------- run bookkeeping ---------------------- */
-  function pendingWorkers(g) { return (g.workers || []).filter(function (w) { return w.status !== "done"; }); }
+  function pendingWorkers(g) { return (g.workers || []).filter(function (w) { return w.status !== "done" && w.status !== "error" && w.status !== "skipped"; }); }
+  // A worker has usable Aadhaar data when Is_Aadhaar_Auth = "Y" (or a Whether-Aadhaar radio is
+  // selected). "N" / blank+unselected means the portal would demand the Aadhaar choice, so we skip.
+  function hasAadhaar(pfx) {
+    var a = $(pfx + "_Is_Aadhaar_Auth");
+    var v = a ? String(a.value).trim().toUpperCase() : null;
+    if (v === "Y") return true;
+    if (v === "N") return false;
+    var base = UPFX + pfx.substring(PFX.length).replace(/_/g, "$");
+    try { return !!document.querySelector('input[type="radio"][name="' + base + '$rbnAadhar"]:checked'); } catch (e) { return true; }
+  }
   function nextGroup(r) {
     for (var i = 0; i < r.groups.length; i++) {
       var g = r.groups[i];
@@ -354,6 +364,10 @@
         var w = pend[i];
         var row = findWorkerRow(w.applicant);
         if (!row) { w.status = "error"; w.message = "name not found in this registration's grid"; w.at = nowMs(); saveRun(r); continue; }
+        if (!hasAadhaar(row.pfx)) {
+          w.status = "skipped"; w.message = "No Aadhaar data available"; w.at = nowMs();
+          dbg("skip (no Aadhaar data)", w.applicant); saveRun(r); continue;
+        }
         // row.pfx = ctl00_ContentPlaceHolder1_gvData_ctl02  ->  unique-name base ctl00$ContentPlaceHolder1$gvData$ctl02
         var base = UPFX + row.pfx.substring(PFX.length).replace(/_/g, "$");
 
