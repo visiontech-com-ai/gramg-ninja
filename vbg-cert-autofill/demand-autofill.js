@@ -12,9 +12,14 @@
   "use strict";
   if (window.__DXWD_UI) return; window.__DXWD_UI = true;
 
-  var LS_RUN = "dxwd_run", LS_ALERT = "dxwd_lastAlert";
+  var LS_RUN = "dxwd_run", LS_ALERT = "dxwd_lastAlert", LS_RESULTS = "dxwd_lastResults";
   var STATE_MAP = { WB: "32" };            // LGD state code (West Bengal). Extend if needed.
   var sel = {};
+  var wasActive = false;                    // to detect the run-finished transition
+
+  // Debug logging — on by default; disable with localStorage.setItem('dxwd_debug','0').
+  var DEBUG = (function () { try { return localStorage.getItem("dxwd_debug") !== "0"; } catch (e) { return true; } })();
+  function dbg() { if (!DEBUG) return; try { console.log.apply(console, ["%c[GramG-WD/ui]", "color:#0A66C2;font-weight:bold"].concat([].slice.call(arguments))); } catch (e) {} }
 
   /* ---------------------- state store (shared localStorage) ---------------------- */
   function loadRun() { try { return JSON.parse(localStorage.getItem(LS_RUN) || "null"); } catch (e) { return null; } }
@@ -94,6 +99,10 @@
 
   function render() {
     var r = loadRun();
+    var active = !!(r && r.active);
+    if (wasActive && !active) onRunEnded(r);   // run just ended — may auto-export + clear the grid
+    wasActive = active;
+    r = loadRun();                             // re-read: onRunEnded may have cleared the run
     if (!r || !r.groups) {
       sel.summary.textContent = "No sheet loaded.";
       sel.tbody.innerHTML = ""; sel.logbox.innerHTML = "";
@@ -147,6 +156,7 @@
     fr.onload = function () {
       try {
         var run = parseWorkbook(fr.result);
+        dbg("parsed sheet", { registrations: run.groups.length, workers: counts(run).total, sig: run.sig });
         var prev = loadRun();
         if (prev && prev.sig === run.sig && prev.groups) {   // same sheet → keep progress (resume)
           run = prev; run.active = false; run.stopRequested = false;
@@ -165,7 +175,8 @@
     var r = loadRun(); if (!r) return;
     r.active = true; r.stopRequested = false; r.consecFail = 0;
     (r.log = r.log || []).push({ t: Date.now(), level: "info", text: "Run started." });
-    saveRun(r); render();
+    saveRun(r); wasActive = true; render();
+    dbg("start clicked", counts(r));
     post("start");
   }
   function doStop() {
@@ -181,18 +192,40 @@
     try { localStorage.removeItem(LS_ALERT); } catch (e) {}
     saveRun(r); render(); status("Reset — all rows pending.", "ok");
   }
-  function doExport() {
-    var r = loadRun(); if (!r || !window.XLSX) return;
-    var aoa = [["Reg No", "Applicant", "Work From", "No of Days", "Date of Application", "Status", "Message", "When"]];
+  function doExport(runArg) {
+    var r = runArg || loadRun(); if (!r || !window.XLSX) return false;
+    var aoa = [["Reg No", "Applicant", "Work From", "No of Days", "Date of Application", "Status", "Entry Result", "When"]];
     r.groups.forEach(function (g) {
       g.workers.forEach(function (w) {
-        aoa.push([g.regNo, w.applicant, w.from, w.days, w.appDate, w.status, w.message || "", w.at ? new Date(w.at).toLocaleString() : ""]);
+        aoa.push([g.regNo, w.applicant, w.from, w.days, w.appDate,
+          (w.status === "done" ? "Success" : w.status === "error" ? "Error" : w.status),
+          w.message || "", w.at ? new Date(w.at).toLocaleString() : ""]);
       });
     });
     var ws = XLSX.utils.aoa_to_sheet(aoa), wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Work Demand");
-    var d = new Date(), name = "WorkDemand-results-" + d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()) + ".xlsx";
+    var d = new Date(), name = "WorkDemand-results-" + d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()) + "-" + pad2(d.getHours()) + pad2(d.getMinutes()) + ".xlsx";
+    dbg("export results", name, (aoa.length - 1) + " rows");
     XLSX.writeFile(wb, name);
+    return true;
+  }
+
+  // When the whole batch has finished, capture the per-record results to an export
+  // (Status + Entry Result + error message), then clear the extension's data grid.
+  function onRunEnded(r) {
+    if (!r) return;
+    var c = counts(r);
+    var naturalFinish = c.pend === 0 && (c.done + c.err) > 0 && !r.stopRequested;
+    dbg("run ended", { done: c.done, error: c.err, pending: c.pend, stopped: !!r.stopRequested, naturalFinish: naturalFinish });
+    if (!naturalFinish) return;
+    try { localStorage.setItem(LS_RESULTS, JSON.stringify(r)); } catch (e) {}   // safety copy
+    var exported = false;
+    try { exported = doExport(r); } catch (e) { dbg("export failed", e && e.message); }
+    try { localStorage.removeItem(LS_RUN); localStorage.removeItem(LS_ALERT); } catch (e) {}
+    wasActive = false;
+    status("All " + (c.done + c.err) + " record(s) processed — " + c.done + " ok, " + c.err + " error" +
+      (exported ? " · results exported and the grid was cleared." : " · grid cleared (export failed — check pop-up/download settings)."), c.err ? "warn" : "ok");
+    dbg("grid cleared after processing");
   }
 
   /* ---------------------- build panel ---------------------- */
@@ -280,7 +313,7 @@
 
   /* ---------------------- sync with engine ---------------------- */
   window.addEventListener("message", function (ev) {
-    if (ev.source !== window || !ev.data || ev.data.source !== "DXWD_DRV") return;
+    if (!ev.data || ev.data.source !== "DXWD_DRV") return;   // don't require ev.source===window (cross-world)
     if (ev.data.type === "sync") render();
   });
   setInterval(render, 1500);   // fallback poll (same-document writes don't fire storage events)

@@ -71,6 +71,9 @@
   // This portal BREAKS the whole Date object in the page (MAIN) world — new Date(), getTime(),
   // Date.now all throw "...reading 'keyCode'". performance.* is unaffected, so base time on it.
   function nowMs() { try { return Math.round((performance.timeOrigin || 0) + performance.now()); } catch (e) { return 0; } }
+  // Debug logging — on by default; disable with localStorage.setItem('dxwd_debug','0').
+  var DEBUG = (function () { try { return localStorage.getItem("dxwd_debug") !== "0"; } catch (e) { return true; } })();
+  function dbg() { if (!DEBUG) return; try { console.log.apply(console, ["%c[GramG-WD/drv]", "color:#137333;font-weight:bold"].concat([].slice.call(arguments))); } catch (e) {} }
   function sleep(ms) { return new Promise(function (res) { setTimeout(res, ms); }); }
   function prmReady() { return !!(window.Sys && Sys.WebForms && Sys.WebForms.PageRequestManager && Sys.WebForms.PageRequestManager.getInstance); }
   function prm() { return Sys.WebForms.PageRequestManager.getInstance(); }
@@ -257,6 +260,7 @@
     var ok = 0, err = 0;
     r.groups.forEach(function (g) { (g.workers || []).forEach(function (w) { if (w.status === "done") ok++; else err++; }); });
     r.active = false; r.stopRequested = false; r.pendingProceed = null;
+    dbg("FINISHED", { submitted: ok, notDone: err });
     log(r, err ? "warn" : "ok", "Finished — " + ok + " submitted" + (err ? ", " + err + " not done" : "") + ".");
     saveRun(r); restoreDialogs();
   }
@@ -295,6 +299,7 @@
   // returns {reloaded:true} if Proceed was clicked (page is navigating away)
   async function driveGroup(r, g) {
     g.attempts = (g.attempts || 0) + 1; saveRun(r);
+    dbg("drive", g.regNo, "· attempt", g.attempts, "· pending", pendingWorkers(g).length);
     try {
       if (loggedOut()) { halt(r, "Portal session/page changed — log in, reopen the Work Demand page, then click Resume."); return { reloaded: false, halted: true }; }
 
@@ -307,6 +312,7 @@
           if (vr.timeout || vr.error) throw new Error("village select " + (vr.timeout ? "timed out" : vr.error));
           await sleep(PACE);
         }
+        dbg("village", g.village, "selected");
       }
 
       // After a village change the registration dropdown repopulates a beat later — wait for it.
@@ -322,6 +328,7 @@
       }
       // The grid may render a beat after the registration postback — wait for its rows.
       await waitFor(function () { return gridRows().length > 0; }, 8000);
+      dbg("registration", g.regNo, "selected · grid rows", gridRows().length);
 
       // -- clear Date of Application on EVERY row first --
       // The portal persists previously-entered dates. Clearing dt_app on all rows makes the sheet
@@ -337,6 +344,8 @@
           await sleep(PACE);
         }
       }
+
+      dbg("cleared Date of Application on all rows");
 
       // -- fill each pending worker --
       var submitted = [];
@@ -364,6 +373,7 @@
         if (toEl && !String(toEl.value).trim()) { w.message = "warning: 'Work Demand To' did not auto-fill"; }
         submitted.push(w.applicant);
         w.status = "filled"; w.at = nowMs(); saveRun(r);
+        dbg("filled", w.applicant, { app: w.appDate, from: w.from, days: w.days });
       }
 
       if (!submitted.length) { log(r, "warn", g.regNo + ": no matching worker filled"); saveRun(r); return { reloaded: false }; }
@@ -373,7 +383,9 @@
       clearLastAlert(); saveRun(r);
       log(r, "info", g.regNo + ": submitting " + submitted.length + " worker(s)…"); saveRun(r);
 
+      dbg("proceed", g.regNo, submitted.length, "worker(s)");
       var out = await clickProceed();
+      dbg("proceed result", g.regNo, out);
       if (out.reloaded) return { reloaded: true }; // full reload → resolveProceed handles it next load
 
       // Async submit (this portal keeps the page): classify from the captured alert, mark here, continue.
