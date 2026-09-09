@@ -137,6 +137,12 @@
         code{background:var(--code-bg);color:var(--code-text);border-radius:5px;padding:.1rem .4rem;font-size:.85em;font-family:Consolas,monospace}
         .guide-link{display:inline-block;margin-top:1.4rem;font-weight:700;color:var(--primary);text-decoration:none;font-size:1rem}
         .guide-link:hover{text-decoration:underline}
+        .tmpl{margin-top:1.6rem;background:#fff;border-radius:14px;padding:1.3rem 1.5rem;color:#1a1f2e}
+        .tmpl h3{margin:0 0 .35rem;font-size:1.12rem;color:#111827}
+        .tmpl-tbl{border-collapse:collapse;font-size:.86rem;min-width:520px}
+        .tmpl-tbl th,.tmpl-tbl td{border:1px solid #e2e6ef;padding:6px 11px;text-align:left;white-space:nowrap}
+        .tmpl-tbl th{background:#eef2fb;color:#1b3a86;font-weight:700}
+        .tmpl-tbl code{background:#eef2fb;color:#1b3a86}
         .faq-item{border:1px solid var(--border);border-radius:12px;margin-top:.8rem;background:var(--bg-card);overflow:hidden}
         .faq-item summary{cursor:pointer;padding:1rem 1.1rem;font-weight:700;font-size:.98rem;list-style:none;display:flex;justify-content:space-between;gap:1rem}
         .faq-item summary::-webkit-details-marker{display:none}
@@ -240,6 +246,23 @@
                 <div class="card"><h3 data-i18n="wd1.h3">A whole sheet in one click</h3><p data-i18n="wd1.p">Pick your <code>.xlsx</code>, review the rows, click Start. It drives every registration and worker end-to-end and captures the portal's “Data Entered Successfully”.</p></div>
                 <div class="card"><h3 data-i18n="wd2.h3">Resumes long lists</h3><p data-i18n="wd2.p">Built for whole Gram Panchayats on a slow portal — progress is saved, so it resumes after any interruption and never double-submits a demand.</p></div>
                 <div class="card"><h3 data-i18n="wd3.h3">Your sheet is the source of truth</h3><p data-i18n="wd3.p">It clears old dates first, so only the workers in your sheet keep a demand — correcting a mistake is as easy as re-running the sheet.</p></div>
+            </div>
+            <div class="tmpl">
+                <h3 data-i18n="tmpl.h3">Need the input Excel? Get the template</h3>
+                <p style="margin:0 0 .9rem;color:#475069" data-i18n="tmpl.p">The Work Demand tool reads a simple <code>.xlsx</code> with four columns. Download the ready-made template, fill in your rows, then load it in the panel and click Start.</p>
+                <div style="overflow-x:auto">
+                    <table class="tmpl-tbl">
+                        <thead><tr><th data-i18n="tmpl.c1">Reg No</th><th data-i18n="tmpl.c2">Applicant</th><th data-i18n="tmpl.c3">Work From</th><th data-i18n="tmpl.c4">No of Days</th></tr></thead>
+                        <tbody>
+                            <tr><td><code>WB-06-003-006-001/009</code></td><td>Sunil Mandi</td><td>07-09-2026</td><td style="text-align:center">3</td></tr>
+                            <tr><td><code>WB-06-003-006-001/010</code></td><td>Bijendranath Kisku</td><td>07-09-2026</td><td style="text-align:center">3</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p style="margin:.9rem 0 0;font-size:.82rem;color:#6b7488" data-i18n="tmpl.note"><b>Work From</b> is written as DD-MM-YYYY. <b>Date of Application</b> is set to today automatically — you don't add it. Header names are matched loosely, in any order.</p>
+                <div style="margin-top:1.1rem">
+                    <a href="work-demand-template.xlsx" download class="btn-download" data-i18n="tmpl.btn">⬇ Download Excel template</a>
+                </div>
             </div>
             <div style="text-align:center;margin-top:1.6rem">
                 <a href="https://chromewebstore.google.com/detail/gramg-ninja/aafcpdejpfbkcnglhihleoiaalnfhlko" target="_blank" rel="noopener" class="btn-download" data-i18n="wd.cta">Get Work Demand automation — free</a>
@@ -364,6 +387,9 @@
         "wd2.h3":"লম্বা তালিকা রিজিউম করে","wd2.p":"ধীর পোর্টালে পুরো গ্রাম পঞ্চায়েতের জন্য তৈরি — অগ্রগতি সংরক্ষিত, তাই যেকোনো বাধার পর আবার শুরু হয় এবং কখনো ডাবল-সাবমিট করে না।",
         "wd3.h3":"আপনার শিটই সত্যের উৎস","wd3.p":"আগে পুরনো তারিখ মুছে দেয়, তাই শুধু শিটের শ্রমিকদেরই ডিমান্ড থাকে — ভুল সংশোধন মানে শুধু শিট আবার চালানো।",
         "wd.cta":"ওয়ার্ক ডিমান্ড অটোমেশন নিন — বিনামূল্যে",
+        "tmpl.h3":"ইনপুট এক্সেল দরকার? টেমপ্লেটটি নিন","tmpl.p":"ওয়ার্ক ডিমান্ড টুলটি চারটি কলামের একটি সাধারণ <code>.xlsx</code> পড়ে। তৈরি টেমপ্লেটটি ডাউনলোড করুন, আপনার সারিগুলো পূরণ করুন, তারপর প্যানেলে লোড করে Start চাপুন।",
+        "tmpl.c1":"রেজি নং","tmpl.c2":"আবেদনকারী","tmpl.c3":"কাজ শুরু","tmpl.c4":"দিনের সংখ্যা",
+        "tmpl.note":"<b>কাজ শুরু</b> DD-MM-YYYY ফরম্যাটে লিখুন। <b>আবেদনের তারিখ</b> স্বয়ংক্রিয়ভাবে আজকের তারিখ ধরা হয় — এটি যোগ করার দরকার নেই। হেডার নাম যেকোনো ক্রমে হলেও মিলে যায়।","tmpl.btn":"⬇ এক্সেল টেমপ্লেট ডাউনলোড করুন",
         "badge.browser":"Chrome ও Edge","badge.pdf":"এক ক্লিকে ৮টি PDF","badge.compress":"স্ক্যান অটো-কমপ্রেস","badge.free":"১০০% বিনামূল্যে",
         "dl.btn":"Chrome-এ যোগ করুন — বিনামূল্যে","dl.desc":"Chrome ওয়েব স্টোর থেকে এক ক্লিকে। বিনামূল্যে — Chrome ও Edge-এ কাজ করে।",
         "what.h2":"এই টুলটি কী করে?","what.p":"VB-G RAM G ওয়ার্ক এন্ট্রি পেজ ৮টি সার্টিফিকেট ব্লকে একই স্বাক্ষরকারীর তথ্য এবং প্রতিটির জন্য আলাদা PDF আপলোড চায়। এই অ্যাড-অন এক ক্লিকে আপনার তথ্য দিয়ে ৮টি ব্লক পূরণ করে এবং একটি ফোল্ডার থেকে ৮টি PDF সংযুক্ত করে — কয়েক মিনিটের পুনরাবৃত্তিমূলক টাইপিং ও আপলোড এক ক্লিকে পরিণত হয়।",
@@ -416,6 +442,9 @@
         "wd2.h3":"लंबी सूची रिज़्यूम करता है","wd2.p":"धीमे पोर्टल पर पूरी ग्राम पंचायत के लिए बना — प्रगति सहेजी जाती है, इसलिए किसी भी रुकावट के बाद फिर शुरू होता है और कभी डबल-सबमिट नहीं करता।",
         "wd3.h3":"आपकी शीट ही सत्य का स्रोत","wd3.p":"पहले पुरानी तारीखें हटाता है, इसलिए केवल शीट के श्रमिकों की डिमांड रहती है — गलती सुधारना यानी बस शीट दोबारा चलाना।",
         "wd.cta":"वर्क डिमांड ऑटोमेशन पाएँ — निःशुल्क",
+        "tmpl.h3":"इनपुट एक्सेल चाहिए? टेम्पलेट लें","tmpl.p":"वर्क डिमांड टूल चार कॉलम वाली एक सरल <code>.xlsx</code> पढ़ता है। तैयार टेम्पलेट डाउनलोड करें, अपनी पंक्तियाँ भरें, फिर पैनल में लोड करके Start दबाएँ।",
+        "tmpl.c1":"रजि. नं.","tmpl.c2":"आवेदक","tmpl.c3":"कार्य आरंभ","tmpl.c4":"दिनों की संख्या",
+        "tmpl.note":"<b>कार्य आरंभ</b> DD-MM-YYYY प्रारूप में लिखें। <b>आवेदन की तारीख</b> स्वतः आज की तारीख मानी जाती है — इसे जोड़ने की जरूरत नहीं। हेडर नाम किसी भी क्रम में मिल जाते हैं।","tmpl.btn":"⬇ एक्सेल टेम्पलेट डाउनलोड करें",
         "badge.browser":"Chrome व Edge","badge.pdf":"एक क्लिक में 8 PDF","badge.compress":"स्कैन ऑटो-कंप्रेस","badge.free":"100% निःशुल्क",
         "dl.btn":"Chrome में जोड़ें — निःशुल्क","dl.desc":"Chrome वेब स्टोर से एक क्लिक में। निःशुल्क — Chrome व Edge पर काम करता है।",
         "what.h2":"यह टूल क्या करता है?","what.p":"VB-G RAM G वर्क एंट्री पेज 8 सर्टिफिकेट ब्लॉक में एक ही हस्ताक्षरकर्ता की जानकारी और हर एक के लिए अलग PDF अपलोड माँगता है। यह ऐड-ऑन एक क्लिक में आपकी जानकारी से सभी 8 ब्लॉक भरता है और एक फ़ोल्डर से 8 PDF जोड़ता है — कई मिनट की दोहराव वाली टाइपिंग और अपलोडिंग एक क्लिक बन जाती है।",
