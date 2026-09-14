@@ -109,11 +109,13 @@
   function prmReady() { return !!(window.Sys && Sys.WebForms && Sys.WebForms.PageRequestManager && Sys.WebForms.PageRequestManager.getInstance); }
   function prm() { return Sys.WebForms.PageRequestManager.getInstance(); }
 
+  function stopSignal() { var e = new Error("stopped by user"); e.__stop = true; return e; }
   function waitFor(cond, timeout, interval) {
     interval = interval || 150;
-    return new Promise(function (res) {
+    return new Promise(function (res, reject) {
       var t0 = nowMs();
       (function tick() {
+        if (stopping()) return reject(stopSignal());   // abort promptly on Stop
         var v; try { v = cond(); } catch (e) { v = false; }
         if (v) return res(v);
         if (nowMs() - t0 > timeout) return res(false);
@@ -137,25 +139,29 @@
 
   // Await a single async UpdatePanel postback started by triggerFn().
   function awaitAsync(triggerFn, timeoutMs) {
-    return new Promise(function (resolve) {
+    return new Promise(function (resolve, reject) {
       if (!prmReady()) { try { triggerFn(); } catch (e) {} return resolve({ error: "ajax runtime not ready" }); }
-      var p = prm(), done = false, to;
+      var p = prm(), done = false, to, sp;
+      function cleanup() { try { p.remove_endRequest(end); } catch (e) {} clearTimeout(to); clearInterval(sp); }
       function end(sender, args) {
-        if (done) return; done = true;
-        try { p.remove_endRequest(end); } catch (e) {}
-        clearTimeout(to);
+        if (done) return; done = true; cleanup();
         var err = null; try { err = args && args.get_error && args.get_error(); } catch (e) {}
         if (err) { try { args.set_errorHandled(true); } catch (e) {} return resolve({ error: err.message || String(err) }); }
         resolve({ ok: true });
       }
       try { p.add_endRequest(end); } catch (e) { return resolve({ error: "cannot hook postback" }); }
       to = setTimeout(function () {
-        if (done) return; done = true;
-        try { p.remove_endRequest(end); } catch (e) {}
+        if (done) return; done = true; cleanup();
         resolve({ timeout: true });
       }, timeoutMs);
+      // Abort the wait promptly if Stop is requested mid-postback (the postback may finish server-side;
+      // we just stop waiting and let the caller bail — nothing was submitted).
+      sp = setInterval(function () {
+        if (done) return;
+        if (stopping()) { done = true; cleanup(); reject(stopSignal()); }
+      }, 250);
       try { triggerFn(); } catch (e) {
-        if (!done) { done = true; try { p.remove_endRequest(end); } catch (e2) {} clearTimeout(to); resolve({ error: String(e) }); }
+        if (!done) { done = true; cleanup(); resolve({ error: String(e) }); }
       }
     });
   }
@@ -505,6 +511,9 @@
       saveRun(r);
       return { reloaded: false };
     } catch (e) {
+      // Stop requested mid-step (a wait was aborted): bail cleanly — leave workers pending, no error/retry.
+      // The main loop's stop check then logs "Stopped by user." and halts.
+      if (e && e.__stop) { dbg("stopped mid-step", g.regNo); saveRun(r); return { reloaded: false }; }
       // A thrown error (timeout, DOM/postback failure) isn't applicant-specific — count it against
       // every applicant still pending in this registration; those out of retries are marked error.
       var reason = (e && e.message ? e.message : String(e));
@@ -521,7 +530,8 @@
     if (!r || !r.active) { restoreDialogs(); return; }
     overrideDialogs();
 
-    await waitFor(function () { return document.readyState !== "loading" && prmReady() && ($(IDS.village) || loggedOut()); }, 30000);
+    try { await waitFor(function () { return document.readyState !== "loading" && prmReady() && ($(IDS.village) || loggedOut()); }, 30000); }
+    catch (e) { /* stop requested during startup — fall through to the stop check below */ }
 
     r = loadRun(); if (!r || !r.active) { restoreDialogs(); return; }
 
