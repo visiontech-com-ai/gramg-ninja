@@ -10,6 +10,7 @@
     background:#fff;width:340px;font-size:14px}
   .hd{background:var(--blue);color:#fff;padding:12px 14px;display:flex;align-items:center;gap:10px}
   .hd svg{flex:0 0 26px}
+  .hd .logo{flex:0 0 28px;width:28px;height:28px;border-radius:6px;background:#fff}
   .hd b{font-size:14px}
   .hd small{display:block;font-size:11px;opacity:.85;font-weight:400}
   .bd{padding:14px}
@@ -42,12 +43,14 @@
   .prev td{border:1px solid #eef1f7;padding:2px 4px;white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis}
   .pop{background:#fff8e1;border-bottom:1px solid #f4d160;padding:10px 14px;font-size:12.5px}
   .pbtn{margin-top:6px;padding:6px 10px;border:0;border-radius:7px;background:var(--blue);color:#fff;font-size:12.5px;font-weight:600;cursor:pointer}
+  .brand-foot{border-top:1px solid #eef1f7;padding:10px 14px;text-align:center;font-size:10px;color:#8a92a0;line-height:1.4}
+  .brand-foot a{color:var(--blue);text-decoration:none;font-weight:600}.brand-foot a:hover{text-decoration:underline}
 </style>
 </head>
 <body>
   <div class="hd">
-    <svg width="26" height="26" viewBox="0 0 34 34"><rect width="34" height="34" rx="8" fill="#1b3a86"/><path d="M8 18 l6 6 l12 -14" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    <div><b>Signing authority</b><small>Used for all 8 certificate blocks</small></div>
+    <img class="logo" src="icons/icon48.png" alt="">
+    <div><b>GramG Ninja</b><small>Signing authority · used for all 8 certificate blocks</small></div>
   </div>
   <div id="popBanner" class="pop hide"></div>
   <div class="bd">
@@ -80,6 +83,10 @@
     <button id="tabsBtn" class="btn ghost">Consolidate multiple tabs…</button>
     <div id="dxMsg" class="dxmsg"></div>
     <div id="dxResults"></div>
+  </div>
+
+  <div class="brand-foot">
+    <a href="https://visiontech.com.in" target="_blank" rel="noopener">VisionTech</a> — Vision Technologies &amp; Robotics · VB-G RAM G utilities · v<span id="brandVer"></span>
   </div>
 
   <script src="lib/jspdf.umd.min.js"></script>

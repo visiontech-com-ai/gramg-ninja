@@ -8,6 +8,12 @@
   var saved = document.getElementById("saved");
   var savedTimer = null;
 
+  // Brand footer version (inline scripts are blocked by the MV3 CSP, so set it here).
+  try {
+    var vEl = document.getElementById("brandVer");
+    if (vEl && chrome.runtime && chrome.runtime.getManifest) vEl.textContent = chrome.runtime.getManifest().version;
+  } catch (e) {}
+
   function hasAny(s) { return !!(s && (s.name || s.desig || s.dept || s.mob || s.email)); }
   function populate(s) { FIELDS.forEach(function (k) { if (s[k]) el[k].value = s[k]; }); }
 
