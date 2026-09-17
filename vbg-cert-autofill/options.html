@@ -45,17 +45,29 @@
   .pbtn{margin-top:6px;padding:6px 10px;border:0;border-radius:7px;background:var(--blue);color:#fff;font-size:12.5px;font-weight:600;cursor:pointer}
   .brand-foot{border-top:1px solid #eef1f7;padding:10px 14px;text-align:center;font-size:10px;color:#8a92a0;line-height:1.4}
   .brand-foot a{color:var(--blue);text-decoration:none;font-weight:600}.brand-foot a:hover{text-decoration:underline}
+  .tabs{display:flex;border-bottom:1px solid var(--line);background:#f5f7fc}
+  .tab{flex:1;padding:9px 8px;border:0;background:transparent;font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent}
+  .tab.active{color:var(--blue);border-bottom-color:var(--blue);background:#fff}
+  .pwrow{display:flex;align-items:flex-start;gap:9px;padding:11px 14px;border-top:1px solid #eef1f7;background:#fbfcfe;font-size:12px;color:var(--ink);cursor:pointer}
+  .pwrow input{margin-top:2px;flex:0 0 auto}
+  .pwrow .sub{display:block;color:var(--muted);font-size:11px;margin-top:2px;line-height:1.35}
 </style>
 </head>
 <body>
   <div class="hd">
     <img class="logo" src="icons/icon48.png" alt="">
-    <div><b>GramG Ninja</b><small>Signing authority · used for all 8 certificate blocks</small></div>
+    <div><b>GramG Ninja</b><small>Certificate auto-fill &amp; data tools</small></div>
   </div>
   <div id="popBanner" class="pop hide"></div>
-  <div class="bd">
-    <p class="intro">Enter these once. They are saved in this browser and filled
-      into every certificate block on the Work Entry page.</p>
+
+  <div class="tabs">
+    <button class="tab active" id="tabCertBtn" data-pane="pane-cert">Certificate</button>
+    <button class="tab" id="tabDataBtn" data-pane="pane-data">Data tools</button>
+  </div>
+
+  <div class="bd tabpane" id="pane-cert">
+    <p class="intro">Signing-authority details, filled into every certificate block on the Work Entry page.
+      Enter once — they are saved in this browser.</p>
 
     <div class="grp"><label for="name">Name</label><input id="name" type="text" autocomplete="off"></div>
     <div class="two">
@@ -72,7 +84,7 @@
       PDFs and fill the form — the panel there picks up these details automatically.</div>
   </div>
 
-  <div class="bd sec">
+  <div class="bd tabpane" id="pane-data" hidden>
     <div class="grp" style="margin-bottom:6px">
       <b style="font-size:13px">Extract table data</b>
       <p class="intro" style="margin:4px 0 8px">Pull tables &amp; grids from the page you're viewing —
@@ -84,6 +96,12 @@
     <div id="dxMsg" class="dxmsg"></div>
     <div id="dxResults"></div>
   </div>
+
+  <label class="pwrow" for="pwRevealChk">
+    <input type="checkbox" id="pwRevealChk" checked>
+    <span><b>🔓 Show passwords on the VB-G RAM G portal</b>
+      <span class="sub">Unmasks password boxes on all <b>*.dord.gov.in</b> pages so you can read what you type. Uncheck for normal dots.</span></span>
+  </label>
 
   <div class="brand-foot">
     <a href="https://visiontech.com.in" target="_blank" rel="noopener">VisionTech</a> — Vision Technologies &amp; Robotics · VB-G RAM G utilities · v<span id="brandVer"></span>

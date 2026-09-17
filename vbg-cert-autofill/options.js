@@ -127,6 +127,34 @@
     chrome.tabs.create({ url: chrome.runtime.getURL("extractor.html") });
   });
 
+  /* ---- Tabs ---- */
+  (function () {
+    var tabs = Array.prototype.slice.call(document.querySelectorAll(".tab"));
+    function show(pane) {
+      tabs.forEach(function (t) {
+        var on = t.getAttribute("data-pane") === pane;
+        t.classList.toggle("active", on);
+        var p = document.getElementById(t.getAttribute("data-pane"));
+        if (p) p.hidden = !on;
+      });
+    }
+    tabs.forEach(function (t) { t.addEventListener("click", function () { show(t.getAttribute("data-pane")); }); });
+  })();
+
+  /* ---- Password revealer toggle (default ON) ---- */
+  (function () {
+    var chk = $("pwRevealChk"); if (!chk) return;
+    try {
+      chrome.storage.local.get("vbgRevealPw", function (r) {
+        // default ON when unset
+        chk.checked = !(r && r.vbgRevealPw === false);
+      });
+    } catch (e) {}
+    chk.addEventListener("change", function () {
+      try { chrome.storage.local.set({ vbgRevealPw: chk.checked }); } catch (e) {}
+    });
+  })();
+
   /* saved-join suggestion in the popup */
   (function () {
     var norm = (window.DX && DX.normUrl) || function (u) { return String(u || "").split(/[?#]/)[0].toLowerCase(); };

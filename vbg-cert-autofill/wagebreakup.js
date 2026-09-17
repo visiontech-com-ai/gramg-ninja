@@ -58,6 +58,9 @@
       ".dxwbk-lbl{font-size:12px;color:#5b6472}.dxwbk-in{padding:6px 8px;border:1px solid #c7cfdd;border-radius:7px;font-size:13px;min-width:220px}" +
       ".dxwbk-foot{margin-top:14px;padding-top:9px;border-top:1px solid #eef1f7;text-align:center;font-size:11.5px;color:#7a8290}.dxwbk-foot b{color:#1b3a86}" +
       ".dxwbk-disc{font-size:10px;color:#8a92a0;line-height:1.4;margin-bottom:6px}.dxwbk-foot a.dxwbk-vt{color:#1b3a86;text-decoration:none}.dxwbk-foot a.dxwbk-vt:hover{text-decoration:underline}" +
+      ".dxwbk-rate{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fff8e6;border:1px solid #f2d98a;border-radius:8px;padding:8px 12px;margin-top:14px;font-size:12.5px;color:#7a5a00}" +
+      ".dxwbk-rate-btns{display:flex;gap:6px;flex:0 0 auto}.dxwbk-rlink{background:#1b3a86;color:#fff;border:0;border-radius:6px;padding:5px 12px;font-size:12.5px;font-weight:600;cursor:pointer}.dxwbk-rlink:hover{filter:brightness(1.08)}" +
+      ".dxwbk-rx{background:transparent;border:0;color:#9a6700;font-size:17px;line-height:1;cursor:pointer;padding:0 2px}" +
       "#dxwbk-toast{position:fixed;right:18px;bottom:18px;z-index:2147483646;background:#137333;color:#fff;padding:10px 14px;border-radius:8px;" +
       "font:600 12.5px 'Segoe UI',Arial,sans-serif;box-shadow:0 3px 12px rgba(0,0,0,.28)}";
     (document.head || document.documentElement).appendChild(s);
@@ -135,7 +138,31 @@
       showBreakup(wlno, b);
     });
   }
+  /* ---------------- smart rate & share prompt (shared with the other surfaces) ---------------- */
+  var STORE_URL = "https://chromewebstore.google.com/detail/gramg-ninja/aafcpdejpfbkcnglhihleoiaalnfhlko";
+  var RATE_KEY = "gramg_rate_next", RATE_WINS = "gramg_rate_wins";
+  var RATE_PERIOD = 7 * 24 * 60 * 60 * 1000, RATE_MIN_WINS = 2;
+  function rateNext() { try { return parseInt(localStorage.getItem(RATE_KEY) || "0", 10) || 0; } catch (e) { return 0; } }
+  function rateWins() { try { return parseInt(localStorage.getItem(RATE_WINS) || "0", 10) || 0; } catch (e) { return 0; } }
+  function rateDue() { return rateWins() >= RATE_MIN_WINS && Date.now() >= rateNext(); }
+  function recordWin() { try { localStorage.setItem(RATE_WINS, String(rateWins() + 1)); } catch (e) {} }
+  function snoozeRate() { try { localStorage.setItem(RATE_KEY, String(Date.now() + RATE_PERIOD)); localStorage.setItem(RATE_WINS, "0"); } catch (e) {} }
+  function buildRatePrompt() {
+    if (!rateDue()) return null;
+    var box = document.createElement("div"); box.className = "dxwbk-rate";
+    var msg = document.createElement("span"); msg.textContent = "⭐ Finding GramG Ninja useful? Please rate & share.";
+    var btns = document.createElement("span"); btns.className = "dxwbk-rate-btns";
+    function mk(label, fn) { var b = document.createElement("button"); b.className = "dxwbk-rlink"; b.textContent = label; b.addEventListener("click", fn); return b; }
+    var self = box;
+    btns.appendChild(mk("Rate", function () { try { window.open(STORE_URL + "/reviews", "_blank", "noopener"); } catch (e) {} snoozeRate(); self.remove(); }));
+    btns.appendChild(mk("Share", function () { try { if (navigator.clipboard) navigator.clipboard.writeText(STORE_URL); else window.open(STORE_URL, "_blank", "noopener"); } catch (e) {} snoozeRate(); self.remove(); }));
+    var x = document.createElement("button"); x.className = "dxwbk-rx"; x.textContent = "×"; x.title = "Later"; x.addEventListener("click", function () { snoozeRate(); self.remove(); });
+    box.appendChild(msg); box.appendChild(btns); box.appendChild(x);
+    return box;
+  }
+
   function showBreakup(wlno, b) {
+    recordWin();   // a successful breakup is a good moment — count it toward the rate prompt
     modal("Wage list amount breakup — caste-wise", function (bd) {
       var tbl = document.createElement("table"); tbl.className = "dxwbk-tbl";
       var heads = ["Wagelist No", "Oth Amt", "SC Amt", "ST Amt", "Total Amt"];
@@ -170,6 +197,8 @@
         w.textContent = b.missing + " job card(s) weren't found in the saved register and were counted under Others. Open the Registration Application Register for this GP to refresh.";
         bd.appendChild(w);
       }
+      var rp = buildRatePrompt(); if (rp) bd.appendChild(rp);
+
       var foot = document.createElement("div"); foot.className = "dxwbk-foot";
       var ver = ""; try { if (chrome && chrome.runtime && chrome.runtime.getManifest) ver = chrome.runtime.getManifest().version; } catch (e) {}
       foot.innerHTML =

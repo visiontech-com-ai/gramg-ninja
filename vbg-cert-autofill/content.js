@@ -347,6 +347,7 @@
     if (sel.vbg_pick) sel.vbg_pick.textContent = "Choose folder for the next entry…";
     status("✓ Done — all " + BLOCKS.length + " blocks filled and " + files +
       " PDF(s) attached. Review the form and click the page’s Save.", "ok");
+    try { recordWin(); } catch (e) {}   // a good moment — count it toward the rate prompt
   }
 
   /* ---------------------- settings load / live update ----------------------
@@ -396,17 +397,19 @@
     s.className = "st " + (kind || "");
   }
 
-  /* ---------------- rate & share prompt (every 7 days) ---------------- */
+  /* ---------------- smart rate & share prompt ----------------
+     Fires after a HAPPY moment (a successful certificate fill here, or a demand batch /
+     wage breakup elsewhere — recordWin() is called by each area) once the user has a
+     couple of wins, then snoozes ~7 days. Shared across surfaces on the same origin. */
   var STORE_URL = "https://chromewebstore.google.com/detail/gramg-ninja/aafcpdejpfbkcnglhihleoiaalnfhlko";
-  var RATE_KEY = "gramg_rate_next", RATE_PERIOD = 7 * 24 * 60 * 60 * 1000;   // shared across both widgets (same origin)
+  var RATE_KEY = "gramg_rate_next", RATE_WINS = "gramg_rate_wins";
+  var RATE_PERIOD = 7 * 24 * 60 * 60 * 1000, RATE_MIN_WINS = 2;
   function rateNext() { try { return parseInt(localStorage.getItem(RATE_KEY) || "0", 10) || 0; } catch (e) { return 0; } }
-  function snoozeRate() { try { localStorage.setItem(RATE_KEY, String(Date.now() + RATE_PERIOD)); } catch (e) {} if (sel.vbg_rate) sel.vbg_rate.hidden = true; }
-  function maybeShowRate() {
-    if (!sel.vbg_rate) return;
-    var n = rateNext();
-    if (!n) { snoozeRate(); return; }          // first run → arm for 7 days, don't nag immediately
-    sel.vbg_rate.hidden = Date.now() < n;
-  }
+  function rateWins() { try { return parseInt(localStorage.getItem(RATE_WINS) || "0", 10) || 0; } catch (e) { return 0; } }
+  function rateDue() { return rateWins() >= RATE_MIN_WINS && Date.now() >= rateNext(); }
+  function recordWin() { try { localStorage.setItem(RATE_WINS, String(rateWins() + 1)); } catch (e) {} maybeShowRate(); }
+  function snoozeRate() { try { localStorage.setItem(RATE_KEY, String(Date.now() + RATE_PERIOD)); localStorage.setItem(RATE_WINS, "0"); } catch (e) {} if (sel.vbg_rate) sel.vbg_rate.hidden = true; }
+  function maybeShowRate() { if (sel.vbg_rate) sel.vbg_rate.hidden = !rateDue(); }
 
   function showMap(on) {
     if (sel.vbg_map) sel.vbg_map.style.display = on ? "block" : "none";
