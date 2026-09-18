@@ -155,6 +155,15 @@
     });
   })();
 
+  /* ---- Enable copy/paste toggle (default ON) ---- */
+  (function () {
+    var chk = $("pasteChk"); if (!chk) return;
+    try { chrome.storage.local.get("vbgEnablePaste", function (r) { chk.checked = !(r && r.vbgEnablePaste === false); }); } catch (e) {}
+    chk.addEventListener("change", function () {
+      try { chrome.storage.local.set({ vbgEnablePaste: chk.checked }); } catch (e) {}
+    });
+  })();
+
   /* saved-join suggestion in the popup */
   (function () {
     var norm = (window.DX && DX.normUrl) || function (u) { return String(u || "").split(/[?#]/)[0].toLowerCase(); };
