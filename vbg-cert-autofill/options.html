@@ -63,6 +63,7 @@
   <div class="tabs">
     <button class="tab active" id="tabCertBtn" data-pane="pane-cert">Certificate</button>
     <button class="tab" id="tabDataBtn" data-pane="pane-data">Data tools</button>
+    <button class="tab" id="tabMiscBtn" data-pane="pane-misc">Misc</button>
   </div>
 
   <div class="bd tabpane" id="pane-cert">
@@ -97,19 +98,21 @@
     <div id="dxResults"></div>
   </div>
 
-  <label class="pwrow" for="pwRevealChk">
-    <input type="checkbox" id="pwRevealChk" checked>
-    <span><b>🔓 Show passwords on the VB-G RAM G portal</b>
-      <span class="sub">Unmasks password boxes on all <b>*.dord.gov.in</b> pages so you can read what you type. Uncheck for normal dots.</span></span>
-  </label>
-  <label class="pwrow" for="pasteChk">
-    <input type="checkbox" id="pasteChk" checked>
-    <span><b>📋 Enable copy &amp; paste on the portal</b>
-      <span class="sub">Restores paste, copy and right-click on <b>*.dord.gov.in</b> fields that the portal blocks. Uncheck to leave them as the portal sets them.</span></span>
-  </label>
+  <div class="tabpane" id="pane-misc" hidden>
+    <label class="pwrow" for="pwRevealChk">
+      <input type="checkbox" id="pwRevealChk" checked>
+      <span><b>🔓 Show passwords on the VB-G RAM G portal</b>
+        <span class="sub">Unmasks password boxes on all <b>*.dord.gov.in</b> pages so you can read what you type. Uncheck for normal dots.</span></span>
+    </label>
+    <label class="pwrow" for="pasteChk">
+      <input type="checkbox" id="pasteChk" checked>
+      <span><b>📋 Enable copy &amp; paste on the portal</b>
+        <span class="sub">Restores paste, copy and right-click on <b>*.dord.gov.in</b> fields that the portal blocks. Uncheck to leave them as the portal sets them.</span></span>
+    </label>
+  </div>
 
   <div class="brand-foot">
-    <a href="https://visiontech.com.in" target="_blank" rel="noopener">VisionTech</a> — Vision Technologies &amp; Robotics · VB-G RAM G utilities · v<span id="brandVer"></span>
+    <a href="https://visiontech.com.in" target="_blank" rel="noopener">VisionTech</a>, GramG Ninja · v<span id="brandVer"></span>. <a href="https://deowb.subho.net" target="_blank" rel="noopener">Click here</a> for help.
   </div>
 
   <script src="lib/jspdf.umd.min.js"></script>

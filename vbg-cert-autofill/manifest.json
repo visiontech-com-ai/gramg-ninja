@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "GramG Ninja",
-  "version": "2.1.4",
+  "version": "3.0.0",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmcwtfNesI4Hrz9uLBDOuXfWuA1wf/UvZ+BU1bthK+WURLaV+UehqVFtsj08DnEMlU5g1Aj3UgNadxzn4Lo+J/4sAGmIfKA7QbbMWZZmFpLRmvs/OuiOcj4UQubmpGO0taPP7k5OKW1q5XNTVmFBDTpZg5q3ZxNcDsmWgH3dRulHKsm9fMJGiwPht30n528EOMbzaDNcon+axFXBw0uWnE+VPA/sVuceX6k2uSUUFaBhLXJG0kyt1YxDTobNBPSRqNNo8vKeEHVL9AklrpsWsegLMwsz6CQaJgdTV9w5sSr4HtBNhUsNQJDABKZS2Q3DTIuCq8MgXkrlPdHsisz+2SwIDAQAB",
   "description": "Tools for the VB-G RAM G (MGNREGA) portal: certificate upload, Work Demand autofill from Excel, and reports to Excel/CSV.",
   "icons": {
@@ -98,6 +98,28 @@
       "js": [
         "lib/xlsx.full.min.js",
         "demand-autofill.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false
+    },
+    {
+      "matches": [
+        "https://*.dord.gov.in/vbgramg/workalloc.aspx*"
+      ],
+      "js": [
+        "alloc-driver.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN",
+      "all_frames": false
+    },
+    {
+      "matches": [
+        "https://*.dord.gov.in/vbgramg/workalloc.aspx*"
+      ],
+      "js": [
+        "lib/xlsx.full.min.js",
+        "alloc-autofill.js"
       ],
       "run_at": "document_idle",
       "all_frames": false

@@ -594,7 +594,7 @@
       '<div class="st" id="vbg_status">Choose the folder that holds this scheme’s certificate PDFs.</div>' +
       '<div class="hint">Each PDF just needs its block number <b>1–8</b> in the name — <b>1.pdf</b>, <b>02.pdf</b>, <b>cert-3.pdf</b> all work. Scans over the <b>1 MB</b> server limit are <b>compressed automatically</b> to fit. DPR &amp; Convergence are set to <b>Yes</b> automatically.</div>' +
       '<div class="disclaimer">⚠ Automated filling can make mistakes. This tool assists — it does not replace you. Review the form and the attached files, keep a person in the loop, and confirm before you Save. Use at your own responsibility.</div>' +
-      '<div class="foot"><a class="vt" href="https://visiontech.com.in" target="_blank" rel="noopener"><b>VisionTech</b></a> — Vision Technologies &amp; Robotics · VB-G RAM G utilities · v<span id="vbg_ver"></span></div>' +
+      '<div class="foot"><a class="vt" href="https://visiontech.com.in" target="_blank" rel="noopener"><b>VisionTech</b></a>, GramG Ninja · v<span id="vbg_ver"></span>. <a class="vt" href="https://deowb.subho.net" target="_blank" rel="noopener">Click here</a> for help.</div>' +
     '</div>';
 
   /* ---------------------- go ---------------------- */

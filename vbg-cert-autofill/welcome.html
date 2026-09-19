@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Welcome to GramG Ninja</title>
+<style>
+  :root{--blue:#224aaa;--blue-d:#1a3a86;--ink:#1a1f2e;--muted:#5b6472;--line:#e6e9f0;--ok:#137333;--bg:#f4f6fb}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Segoe UI",Arial,sans-serif;color:var(--ink);background:var(--bg);line-height:1.5}
+  .wrap{max-width:760px;margin:0 auto;padding:0 16px 40px}
+  .hero{background:linear-gradient(135deg,var(--blue),var(--blue-d));color:#fff;padding:30px 16px 34px;margin-bottom:-18px}
+  .hero-in{max-width:760px;margin:0 auto;padding:0 16px;display:flex;align-items:center;gap:16px}
+  .hero .logo{width:56px;height:56px;border-radius:12px;background:#fff;flex:0 0 auto;box-shadow:0 2px 10px rgba(0,0,0,.15)}
+  .hero h1{margin:0;font-size:24px;letter-spacing:.2px}
+  .hero p{margin:4px 0 0;font-size:14px;opacity:.9}
+  .badge-new{display:inline-block;background:#ffd43b;color:#5a4300;font-size:10px;font-weight:800;
+    padding:2px 7px;border-radius:10px;margin-left:8px;vertical-align:middle;letter-spacing:.4px;
+    animation:newFlicker 1.15s ease-in-out infinite}
+  @keyframes newFlicker{
+    0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(255,196,0,.0);transform:scale(1)}
+    45%{opacity:.55;box-shadow:0 0 9px 2px rgba(255,196,0,.85);transform:scale(1.08)}
+    55%{opacity:1;box-shadow:0 0 9px 2px rgba(255,196,0,.85);transform:scale(1.08)}}
+  @media (prefers-reduced-motion:reduce){.badge-new{animation:none}}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 18px 6px;margin-top:26px;
+    box-shadow:0 1px 3px rgba(20,30,60,.05)}
+  .card>.lead{font-size:14px;color:var(--muted);margin:0 0 6px}
+  .feat{display:flex;gap:14px;padding:14px 0;border-top:1px solid #f0f2f7}
+  .feat:first-of-type{border-top:0}
+  .feat .ico{flex:0 0 40px;width:40px;height:40px;border-radius:10px;background:#eef2fb;display:flex;
+    align-items:center;justify-content:center;font-size:20px}
+  .feat h3{margin:0 0 3px;font-size:15px}
+  .feat p{margin:0;font-size:13px;color:var(--muted)}
+  .note{display:flex;gap:10px;background:#fff8e6;border:1px solid #f2d98a;border-radius:12px;
+    padding:13px 15px;margin-top:20px;font-size:13px;color:#7a5a00}
+  .note .ico{font-size:18px;flex:0 0 auto}
+  .cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:22px;align-items:center}
+  .btn{display:inline-block;padding:11px 20px;border:0;border-radius:10px;background:var(--blue);color:#fff;
+    font-size:14px;font-weight:700;cursor:pointer;text-decoration:none}
+  .btn:hover{filter:brightness(1.07)}
+  .btn.ghost{background:#eef2fb;color:var(--blue)}
+  .foot{text-align:center;font-size:12px;color:#8a92a0;margin-top:30px;line-height:1.5}
+  .foot a{color:var(--blue);text-decoration:none;font-weight:600}.foot a:hover{text-decoration:underline}
+  @media (max-width:520px){.hero-in{flex-direction:column;text-align:center}.cta{justify-content:center}}
+</style>
+</head>
+<body>
+  <div class="hero">
+    <div class="hero-in">
+      <img class="logo" src="icons/icon48.png" alt="">
+      <div>
+        <h1>Welcome to GramG Ninja</h1>
+        <p>Your toolkit for the VB-G RAM G (MGNREGA) portal — here's what you can do.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="card">
+      <p class="lead">Every feature runs right inside the portal pages you already use. Open the relevant page and a panel appears automatically.</p>
+
+      <div class="feat">
+        <div class="ico">📝</div>
+        <div>
+          <h3>Certificate Auto-Fill</h3>
+          <p>On the <b>Work Entry</b> page, attach the certificate PDFs and fill each certificate block with your saved signing-authority details in one click. Set them once in the toolbar popup.</p>
+        </div>
+      </div>
+
+      <div class="feat">
+        <div class="ico">📋</div>
+        <div>
+          <h3>Work Demand Automation</h3>
+          <p>On the <b>Work Demand</b> page, load an Excel of demands and the extension enters them for you — per-applicant status, resume/stop any time, and an auto-exported results sheet.</p>
+        </div>
+      </div>
+
+      <div class="feat">
+        <div class="ico">🗂️</div>
+        <div>
+          <h3>Work Allocation Automation <span class="badge-new">NEW</span></h3>
+          <p>On the <b>Work Allocation</b> page, load an Excel and the extension selects each work code, ticks the matching applicants, fills the allocation dates, and saves — skipping and logging anything that can't be allocated.</p>
+        </div>
+      </div>
+
+      <div class="feat">
+        <div class="ico">📊</div>
+        <div>
+          <h3>Data Extraction</h3>
+          <p>Pull any table or grid from the page you're viewing and download it as CSV or JSON — or consolidate tables across several open tabs into one report.</p>
+        </div>
+      </div>
+
+      <div class="feat">
+        <div class="ico">🔧</div>
+        <div>
+          <h3>Portal Helpers <span style="font-size:11px;color:#8a92a0;font-weight:600">(Misc tab)</span></h3>
+          <p>Show passwords as you type and re-enable copy &amp; paste on portal fields that block it. Both are on by default — turn them off in the popup's <b>Misc</b> tab.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="note">
+      <div class="ico">👁️</div>
+      <div><b>Keep a human in the loop.</b> The extension speeds up data entry, but it doesn't replace your judgement. Always review the results sheet and the portal before treating a batch as final.</div>
+    </div>
+
+    <div class="cta">
+      <button class="btn" id="closeBtn">Got it — close this tab</button>
+    </div>
+
+    <div class="foot">
+      <a href="https://visiontech.com.in" target="_blank" rel="noopener">VisionTech</a>, GramG Ninja · v<span id="verSpan"></span>. <a href="https://deowb.subho.net" target="_blank" rel="noopener">Click here</a> for help.
+    </div>
+  </div>
+
+  <script src="welcome.js"></script>
+</body>
+</html>

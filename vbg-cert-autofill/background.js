@@ -28,3 +28,10 @@ chrome.runtime.onStartup.addListener(evaluate);
 chrome.runtime.onInstalled.addListener(evaluate);
 chrome.storage.onChanged.addListener(function (ch, area) { if (ch.dxRecipes) evaluate(); });
 evaluate();
+
+/* First-time users: open a one-time welcome page that introduces the features. */
+chrome.runtime.onInstalled.addListener(function (details) {
+  if (details && details.reason === "install") {
+    try { chrome.tabs.create({ url: chrome.runtime.getURL("welcome.html") }); } catch (e) {}
+  }
+});

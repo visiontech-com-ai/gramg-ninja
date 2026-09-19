@@ -203,7 +203,7 @@
       var ver = ""; try { if (chrome && chrome.runtime && chrome.runtime.getManifest) ver = chrome.runtime.getManifest().version; } catch (e) {}
       foot.innerHTML =
         '<div class="dxwbk-disc">⚠ Figures are computed from the saved register and this page. Verify totals against the portal before relying on them — keep a person in the loop.</div>' +
-        '<div><a class="dxwbk-vt" href="https://visiontech.com.in" target="_blank" rel="noopener"><b>VisionTech</b></a> — Vision Technologies &amp; Robotics · VB-G RAM G utilities' + (ver ? ' · v' + ver : '') + '</div>';
+        '<div><a class="dxwbk-vt" href="https://visiontech.com.in" target="_blank" rel="noopener"><b>VisionTech</b></a>, GramG Ninja' + (ver ? ' · v' + ver : '') + '. <a class="dxwbk-vt" href="https://deowb.subho.net" target="_blank" rel="noopener">Click here</a> for help.</div>';
       bd.appendChild(foot);
     });
   }
